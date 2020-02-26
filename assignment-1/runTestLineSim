@@ -1,1 +1,5 @@
+export PYROBOT=/mnt/d/proyectos/robotics/pyrobot
+export PYTHONPATH=$PYROBOT:$PYTHONPATH
+export PATH=$PATH:$PYROBOT/bin
+export DISPLAY=:0
 pyrobot -s PyrobotSimulator -w ./lineTestWorld.py -r PyrobotRobot60000.py -b ./BrainTestLine.py
