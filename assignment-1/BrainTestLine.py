@@ -24,9 +24,9 @@ class BrainTestNavigator(Brain):
     STATES = [
         { "min": 1, "max": 0.6, "forward": NO_FORWARD, "direction": HARD_LEFT},
         { "min": 0.6, "max": 0.3, "forward": SLOW_FORWARD, "direction": MED_LEFT},
-        { "min": 0.3, "max": 0.2, "forward": MED_FORWARD, "direction": SLOW_LEFT},
-        { "min": 0.2, "max": -0.2, "forward": FULL_FORWARD, "direction": NO_TURN},
-        { "min": -0.2, "max": -0.3, "forward": MED_FORWARD, "direction": SLOW_RIGHT},
+        { "min": 0.3, "max": 0.05, "forward": MED_FORWARD, "direction": SLOW_LEFT},
+        { "min": 0.05, "max": -0.05, "forward": FULL_FORWARD, "direction": NO_TURN},
+        { "min": -0.05, "max": -0.3, "forward": MED_FORWARD, "direction": SLOW_RIGHT},
         { "min": -0.3, "max": -0.6, "forward": SLOW_FORWARD, "direction": MED_RIGHT},
         { "min": -0.6, "max": -1, "forward": NO_FORWARD, "direction": HARD_RIGHT},
     ]
@@ -48,7 +48,7 @@ class BrainTestNavigator(Brain):
     def step(self):
         line_is_visible, error, searchRange = eval(
             self.robot.simulation[0].eval("self.getLineProperties()"))
-        print("Line: {}. Distance: {}. Search range: {}".format(line_is_visible, error, searchRange))
+        print("Line: {}. Error: {}. Search range: {}".format(line_is_visible, error, searchRange))
 
         # We might use this variables
         derivative = error - self.PREVIOUS_ERROR
