@@ -30,7 +30,7 @@ class BrainTestNavigator(Brain):
     ]
 
     # As in the slides
-    PREVIOUS_ERROR = 0
+    PREVIOUS_ERRORS = [0]
     INTEGRAL = 0
 
     # This variable stores the state that was used in the previous tick 
@@ -49,8 +49,9 @@ class BrainTestNavigator(Brain):
         print("Line: {}. Error: {}. Search range: {}".format(line_is_visible, error, searchRange))
 
         # We might use this variables
-        derivative = error - self.PREVIOUS_ERROR
+        derivative = error - self.PREVIOUS_ERRORS[-1]
         self.INTEGRAL += error
+        self.PREVIOUS_ERRORS.append(error)
 
         if line_is_visible:
             self.N_TICKS_LOST = 0
@@ -63,16 +64,19 @@ class BrainTestNavigator(Brain):
                 if state["min"] >= normalized_error > state["max"]:
                     self.move(state["forward"], state["direction"])
                     self.LAST_STATE = state
+                    print("Turning {}: {}".format("right" if state["direction"] < 0 else "left",  state["direction"]))
         else:
             # If the line is not found, the robot won't move, it is going to steer
             # to the direction where the line was seen last time
-            if self.N_TICKS_LOST < 14:
+            if self.N_TICKS_LOST < 10:
                 steering = 0.4
                 direction = steering if self.LAST_STATE["direction"] < 0 else -steering
-                self.move(0,direction)
+                invert = abs(self.PREVIOUS_ERRORS[-1]) < abs(self.PREVIOUS_ERRORS[-2])
+                if invert:
+                    direction *= -1
+                self.move(0.1,direction)
                 self.N_TICKS_LOST += 1
 
-        self.PREVIOUS_ERROR = error
 
 def INIT(engine):
     assert (engine.robot.requires("range-sensor") and
