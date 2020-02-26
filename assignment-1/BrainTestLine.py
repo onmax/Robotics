@@ -74,8 +74,8 @@ class BrainTestNavigator(Brain):
                 invert = abs(self.PREVIOUS_ERRORS[-1]) < abs(self.PREVIOUS_ERRORS[-2])
                 if invert:
                     direction *= -1
-                self.move(0.1,direction)
                 self.N_TICKS_LOST += 1
+                self.move(0.1/self.N_TICKS_LOST,direction)
 
 
 def INIT(engine):
