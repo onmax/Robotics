@@ -9,8 +9,8 @@ from pyrobot.simulators.pysim import TkPioneer, \
 
 
 def INIT():
-    background = 3
-    positions = [[1, 18.9, 4.0], [8.5, 2.35, 1.57], [10.5, 19, 8.2]]
+    background = 4
+    positions = [[1, 18.9, 4.0], [8.5, 2.35, 1.57], [10.5, 19, 8.2], [0.43, 10.7, 12]]
 
     # (width, height), (offset x, offset y), scale
     sim = LineSimulation((450, 675), (20, 650), 32,

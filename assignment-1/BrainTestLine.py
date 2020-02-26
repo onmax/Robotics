@@ -11,12 +11,10 @@ class BrainTestNavigator(Brain):
 
     NO_TURN = 0
 
-    NO_LEFT = 0
     SLOW_LEFT = 0.1
     MED_LEFT = 0.45
     HARD_LEFT = 0.8
 
-    NO_RIGHT = 0
     SLOW_RIGHT = -0.1
     MED_RIGHT = -0.45
     HARD_RIGHT = -0.8
