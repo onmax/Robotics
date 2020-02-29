@@ -52,6 +52,17 @@ class BrainTestNavigator(Brain):
         pass
 
     def step(self):
+        
+        
+        # left: 0
+        # front-left: (1-3)
+        # front-right:(4-6) 
+        # right: 0
+        sonar = [x.value for x in self.robot.sonar[0]['all']]
+        if len(list(filter(lambda x: x < 5, sonar))) > 0:
+            print("HIT")
+            return
+
         line_is_visible, error, searchRange = eval(
             self.robot.simulation[0].eval("self.getLineProperties()"))
         print("Line: {}. Error: {}".format(line_is_visible, error))
