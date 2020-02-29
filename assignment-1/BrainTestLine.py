@@ -4,10 +4,10 @@ import math
 import numpy as np
 
 class BrainTestNavigator(Brain):
-    NO_FORWARD = 0.05
-    SLOW_FORWARD = 0.35
-    MED_FORWARD = 0.6
-    FULL_FORWARD = 1
+    NO_FORWARD = 0
+    SLOW_FORWARD = 0.45
+    MED_FORWARD = 0.75
+    FULL_FORWARD = 1.5
 
     NO_TURN = 0
 
@@ -40,8 +40,13 @@ class BrainTestNavigator(Brain):
     # Specifically, the number of ticks that have been missing without finding the line
     N_TICKS_LOST = 0
 
-    TICKS_TO_TURN_180 = 0
+    TICKS_TO_TURN_180 = int((math.pi**2))
     SEARCH_LEFT = 0
+    SEARCH_RIGTH = 0
+
+    SPIRAL_SIZE = 4
+    TICKS_IN_SPIRAL = 0
+    N_TURNS_IN_SPIRAL = 0
 
     def setup(self):
         pass
@@ -49,7 +54,7 @@ class BrainTestNavigator(Brain):
     def step(self):
         line_is_visible, error, searchRange = eval(
             self.robot.simulation[0].eval("self.getLineProperties()"))
-        print("Line: {}. Error: {}. Search range: {}".format(line_is_visible, error, searchRange))
+        print("Line: {}. Error: {}".format(line_is_visible, error))
 
         # We might use this variables
         derivative = error - self.PREVIOUS_ERRORS[-1]
@@ -59,7 +64,10 @@ class BrainTestNavigator(Brain):
         if line_is_visible:
             self.N_TICKS_LOST = 0
             self.SEARCH_LEFT = 0
-            self.SEARCH_RIGTH += 1
+            self.SEARCH_RIGTH = 0
+            self.SPIRAL_SIZE = 4
+            self.N_TURNS_IN_SPIRAL = 0
+            self.TICKS_IN_SPIRAL = 0
             
             # This part calculates the amount of throttle and the amount of steering that 
             # needs to be applied in order to minimaze the error (go to the center of the
@@ -70,10 +78,20 @@ class BrainTestNavigator(Brain):
                     self.move(state["forward"], state["direction"])
                     self.LAST_STATE = state
                     print("Turning {}: {}".format("right" if state["direction"] < 0 else "left",  state["direction"]))
+        elif self.SEARCH_LEFT >= self.TICKS_TO_TURN_180 and self.SEARCH_RIGTH  >= self.TICKS_TO_TURN_180 * 3:
+            self.TICKS_IN_SPIRAL += 1
+
+            print("Spiral size: {}. Ticks in spiral: {}".format(self.SPIRAL_SIZE, self.TICKS_IN_SPIRAL))
+
+            if self.TICKS_IN_SPIRAL % self.SPIRAL_SIZE == 0:
+                self.move(0, 5)
+                self.N_TURNS_IN_SPIRAL += 1
+                if self.N_TURNS_IN_SPIRAL % 4 == 0:
+                    self.SPIRAL_SIZE += 4
+                return
+
+            self.move(1, 0)
         else:
-            if self.N_TICKS_LOST == 0:
-                self.TICKS_TO_TURN_180 = int((math.pi**2))
-                
             if self.SEARCH_LEFT <= self.TICKS_TO_TURN_180:
                 print("Lost. Searching left...")
                 self.move(self.NO_FORWARD, 1)
