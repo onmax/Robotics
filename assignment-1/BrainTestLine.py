@@ -30,7 +30,7 @@ class BrainTestNavigator(Brain):
     ]
 
     # As in the slides
-    PREVIOUS_ERRORS = [0]
+    PREVIOUS_ERRORS = [0] * 10
     INTEGRAL = 0
 
     # This variable stores the state that was used in the previous tick 
@@ -39,6 +39,9 @@ class BrainTestNavigator(Brain):
     # This is how many ticks the robot has been lost
     # Specifically, the number of ticks that have been missing without finding the line
     N_TICKS_LOST = 0
+
+    TICKS_TO_TURN_180 = 0
+    SEARCH_LEFT = 0
 
     def setup(self):
         pass
@@ -55,7 +58,9 @@ class BrainTestNavigator(Brain):
 
         if line_is_visible:
             self.N_TICKS_LOST = 0
-
+            self.SEARCH_LEFT = 0
+            self.SEARCH_RIGTH += 1
+            
             # This part calculates the amount of throttle and the amount of steering that 
             # needs to be applied in order to minimaze the error (go to the center of the
             # line)
@@ -66,16 +71,19 @@ class BrainTestNavigator(Brain):
                     self.LAST_STATE = state
                     print("Turning {}: {}".format("right" if state["direction"] < 0 else "left",  state["direction"]))
         else:
-            # If the line is not found, the robot won't move, it is going to steer
-            # to the direction where the line was seen last time
-            if self.N_TICKS_LOST < 10:
-                steering = 0.4
-                direction = steering if self.LAST_STATE["direction"] < 0 else -steering
-                invert = abs(self.PREVIOUS_ERRORS[-1]) < abs(self.PREVIOUS_ERRORS[-2])
-                if invert:
-                    direction *= -1
-                self.N_TICKS_LOST += 1
-                self.move(0.1/self.N_TICKS_LOST,direction)
+            if self.N_TICKS_LOST == 0:
+                self.TICKS_TO_TURN_180 = int((math.pi**2))
+                
+            if self.SEARCH_LEFT <= self.TICKS_TO_TURN_180:
+                print("Lost. Searching left...")
+                self.move(self.NO_FORWARD, 1)
+                self.SEARCH_LEFT += 1
+            else:
+                print("Lost. Searching right...")
+                self.move(self.NO_FORWARD, -1)
+                self.SEARCH_RIGTH += 1
+
+            self.N_TICKS_LOST += 1   
 
 
 def INIT(engine):
