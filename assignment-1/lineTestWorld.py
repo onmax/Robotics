@@ -19,6 +19,7 @@ def INIT():
     # an example of an obstacle on the line
     # x1, y1, x2, y2
     sim.addBox(5, 12, 6, 11)
+    sim.addBox(5, 9, 5.4, 9.4)
     
     sim.addRobot(60000,
                  # name, x, y, th, boundingBox

@@ -44,28 +44,84 @@ class BrainTestNavigator(Brain):
     SEARCH_LEFT = 0
     SEARCH_RIGTH = 0
 
-    SPIRAL_SIZE = 4
+    INTIAL_SPIRAL_SIZE = 4
+    SPIRAL_SIZE = INTIAL_SPIRAL_SIZE
     TICKS_IN_SPIRAL = 0
     N_TURNS_IN_SPIRAL = 0
 
+    LOCATIONS = ["left", "left-top", "top-left", "ttop-left", "ttop-right", "top-right", "right-top", "right"]
+    SONARS = {}
+    SONAR = {
+        "ACTIVE": False,
+        "WALL_IN": "",
+        "HAS_BEEN_ACTIVE_FOR": 0, # Number of ticks that the SONAR has been active,
+        "LOOKING_FOR_LINE_FOR": 0 # Number of ticks that the robot has been looking for the line rotating
+    }
+
+    def get_active_sonars(self):
+        sonars_list = [x.value for x in self.robot.sonar[0]['all']]
+        for (sonar , location) in zip(sonars_list, self.LOCATIONS):
+            self.SONARS[location] = sonar
+        return list(filter(lambda x: self.SONARS[x] < 0.6, self.SONARS))
+    
+    def rotate_to_go_around(self, active_sonars):
+        self.SONAR["ACTIVE"] = True
+
+        def is_in_active(l):
+            return len(list(set(l)&set(active_sonars))) > 0
+
+        print(active_sonars, is_in_active(['left', 'right']))
+        if is_in_active(['left', 'right']) and len(active_sonars) <= 2:
+            self.move(0.7, 0)    
+        else:
+            if is_in_active(["left-top", "top-left", "ttop-left"]):
+                self.move(0, -0.2)
+                self.SONAR["WALL_IN"] = "LEFT"
+            else:
+                self.move(0, 0.2)
+                self.SONAR["WALL_IN"] = "RIGHT"
+
+    def go_around(self):
+        if self.SONAR["HAS_BEEN_ACTIVE_FOR"] % 2 == 0:
+            self.SONAR["LOOKING_FOR_LINE_FOR"] += 1
+            rotate = -5 if self.SONAR["WALL_IN"] == "RIGHT" else 5
+            if self.SONAR["LOOKING_FOR_LINE_FOR"] == 1:
+                self.move(0, rotate)
+            else:
+                self.move(0, -rotate)
+                self.SONAR["LOOKING_FOR_LINE_FOR"] = 0
+                self.SONAR["HAS_BEEN_ACTIVE_FOR"] += 1
+        else:
+            self.SONAR["HAS_BEEN_ACTIVE_FOR"] += 1
+
+            if self.SONAR["WALL_IN"] == "RIGHT":
+                print("Avoiding obstacle turning right")
+                self.move(0, -3)
+            elif self.SONAR["WALL_IN"] == "LEFT":
+                print("Avoiding obstacle turning left")
+                self.move(0, 3)
+            else:
+                self.move(1,0)
+
     def setup(self):
         pass
+    
 
     def step(self):
-        
-        
-        # left: 0
-        # front-left: (1-3)
-        # front-right:(4-6) 
-        # right: 0
-        sonar = [x.value for x in self.robot.sonar[0]['all']]
-        if len(list(filter(lambda x: x < 5, sonar))) > 0:
-            print("HIT")
+        active_sonars = self.get_active_sonars()
+        if len(active_sonars) > 0:
+            self.rotate_to_go_around(active_sonars)
             return
 
         line_is_visible, error, searchRange = eval(
             self.robot.simulation[0].eval("self.getLineProperties()"))
         print("Line: {}. Error: {}".format(line_is_visible, error))
+        
+        if self.SONAR["ACTIVE"] and not line_is_visible:
+            self.go_around()
+            return
+
+        self.SONAR["ACTIVE"] = False
 
         # We might use this variables
         derivative = error - self.PREVIOUS_ERRORS[-1]
@@ -76,7 +132,7 @@ class BrainTestNavigator(Brain):
             self.N_TICKS_LOST = 0
             self.SEARCH_LEFT = 0
             self.SEARCH_RIGTH = 0
-            self.SPIRAL_SIZE = 4
+            self.SPIRAL_SIZE = self.INTIAL_SPIRAL_SIZE
             self.N_TURNS_IN_SPIRAL = 0
             self.TICKS_IN_SPIRAL = 0
             
@@ -91,16 +147,13 @@ class BrainTestNavigator(Brain):
                     print("Turning {}: {}".format("right" if state["direction"] < 0 else "left",  state["direction"]))
         elif self.SEARCH_LEFT >= self.TICKS_TO_TURN_180 and self.SEARCH_RIGTH  >= self.TICKS_TO_TURN_180 * 3:
             self.TICKS_IN_SPIRAL += 1
-
             print("Spiral size: {}. Ticks in spiral: {}".format(self.SPIRAL_SIZE, self.TICKS_IN_SPIRAL))
-
             if self.TICKS_IN_SPIRAL % self.SPIRAL_SIZE == 0:
                 self.move(0, 5)
                 self.N_TURNS_IN_SPIRAL += 1
                 if self.N_TURNS_IN_SPIRAL % 4 == 0:
-                    self.SPIRAL_SIZE += 4
+                    self.SPIRAL_SIZE += int(self.INTIAL_SPIRAL_SIZE * 1.5)
                 return
-
             self.move(1, 0)
         else:
             if self.SEARCH_LEFT <= self.TICKS_TO_TURN_180:
