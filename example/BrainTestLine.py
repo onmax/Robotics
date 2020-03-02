@@ -26,12 +26,8 @@ class BrainTestNavigator(Brain):
         print("I got from the simulation", hasLine, lineDistance, searchRange)
 
         if (hasLine):
-            if (lineDistance > self.NO_ERROR):
-                self.move(self.FULL_FORWARD, self.HARD_LEFT)
-            elif (lineDistance < self.NO_ERROR):
-                self.move(self.FULL_FORWARD, self.HARD_RIGHT)
-            else:
-                self.move(self.FULL_FORWARD, self.NO_TURN)
+            TV = lineDistance/searchRange
+            self.move(max(0, 1 - abs(TV*1.5)))
         else:
             # if we can't find the line we just stop, this isn't very smart
             self.move(self.NO_FORWARD, self.NO_TURN)
