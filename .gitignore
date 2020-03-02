@@ -130,4 +130,5 @@ dmypy.json
 
 # Ignore PyRobot
 pyrobot
-assignment-1/runTestLineSim.sh
+*/runTestLineSim.sh
+*/error
