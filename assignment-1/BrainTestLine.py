@@ -29,7 +29,7 @@ class BrainTestNavigator(Brain):
         { "min": -0.6, "max": -1, "forward": NO_FORWARD, "direction": HARD_RIGHT},
     ]
 
-    # As in the slides
+    # As in the slides, this variables are not used sadly   
     PREVIOUS_ERRORS = [0] * 10
     INTEGRAL = 0
 
@@ -54,17 +54,29 @@ class BrainTestNavigator(Brain):
     SONAR = {
         "ACTIVE": False,
         "WALL_IN": "",
-        "HAS_BEEN_ACTIVE_FOR": 0, # Number of ticks that the SONAR has been active,
+        "HAS_BEEN_ACTIVE_FOR": 0, # Number of ticks that the SONAR has been active
         "LOOKING_FOR_LINE_FOR": 0 # Number of ticks that the robot has been looking for the line rotating
     }
 
     def get_active_sonars(self):
+        # This function returns the sonars that have detected an object closer than 0.6.
+        # It will return the values as a dictionary. As an example: {"left": 0.3, "left-top": 0.46}
         sonars_list = [x.value for x in self.robot.sonar[0]['all']]
+
+        # Convert it to dictionary
         for (sonar , location) in zip(sonars_list, self.LOCATIONS):
             self.SONARS[location] = sonar
+        
+        # Filter then sonar to get only the ones that are close to the object
         return list(filter(lambda x: self.SONARS[x] < 0.6, self.SONARS))
     
     def rotate_to_go_around(self, active_sonars):
+        # This function will rotate around an object.
+        # It will produce 3 moves in the robot depending on the sensors:
+        # - 1. It will go straigt if it detects that the object is on the left right
+        # - 2. It will turn right in order to try to leave the object on the left
+        # - 3. It will turn left in order to try to leave the object on the left
+
         self.SONAR["ACTIVE"] = True
 
         def is_in_active(l):
@@ -81,7 +93,19 @@ class BrainTestNavigator(Brain):
                 self.move(0, 0.2)
                 self.SONAR["WALL_IN"] = "RIGHT"
 
+
     def go_around(self):
+        # This function will have two states:
+        # 1. Search for the line rotating 90º to the opposite side where the object is placed and going back again if the line is not found. Example 1.
+        # 2. Go around the object. If the right or left sensor stops reading data from the sensor
+        # (it gets the maximum value), that means the robot needs to turn in order to keep around the object. Example 2
+
+        # EXAMPLES
+        # The line represent the sensor
+        #  1.           2.
+        #    ROBOT              ROBOT
+        #     |                 |
+        #   XXXXXX       XXXXX  |
         if self.SONAR["HAS_BEEN_ACTIVE_FOR"] % 2 == 0:
             self.SONAR["LOOKING_FOR_LINE_FOR"] += 1
             rotate = -5 if self.SONAR["WALL_IN"] == "RIGHT" else 5
@@ -123,7 +147,7 @@ class BrainTestNavigator(Brain):
 
         self.SONAR["ACTIVE"] = False
 
-        # We might use this variables
+        #  UNUSED VARIABLES
         derivative = error - self.PREVIOUS_ERRORS[-1]
         self.INTEGRAL += error
         self.PREVIOUS_ERRORS.append(error)
@@ -146,6 +170,9 @@ class BrainTestNavigator(Brain):
                     self.LAST_STATE = state
                     print("Turning {}: {}".format("right" if state["direction"] < 0 else "left",  state["direction"]))
         elif self.SEARCH_LEFT >= self.TICKS_TO_TURN_180 and self.SEARCH_RIGTH  >= self.TICKS_TO_TURN_180 * 3:
+            # Going in spiral if the search around the robot didn't work.
+            # It will go forward for a certain amount of ticks. Then, it will turn and go forward for a certain amount of ticks again
+            # Every 4 of this iterations it will increase the number of TICKS that the robot needs to go forward.
             self.TICKS_IN_SPIRAL += 1
             print("Spiral size: {}. Ticks in spiral: {}".format(self.SPIRAL_SIZE, self.TICKS_IN_SPIRAL))
             if self.TICKS_IN_SPIRAL % self.SPIRAL_SIZE == 0:
@@ -156,6 +183,7 @@ class BrainTestNavigator(Brain):
                 return
             self.move(1, 0)
         else:
+            # It will search for the left and the for the right.
             if self.SEARCH_LEFT <= self.TICKS_TO_TURN_180:
                 print("Lost. Searching left...")
                 self.move(self.NO_FORWARD, 1)
