@@ -1,6 +1,15 @@
+'''
+AUTHORS
+
+Máximo José García Martínez
+Andrea Velarde Chávez
+Alejandro Senovilla Tejedor
+'''
+
 from pyrobot.brain import Brain
 
 import math
+
 
 
 class BrainTestNavigator(Brain):
