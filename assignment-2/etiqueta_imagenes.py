@@ -2,52 +2,51 @@ import time
 import cv2
 from scipy.misc import imread, imsave
 from matplotlib import pyplot as plt
-import select_pixels as sel
 import numpy as np
-
-
-# Abres el video / camara con
 
 capture = cv2.VideoCapture("./video1.mp4")
 
-# Lees las imagenes y las muestras para elegir la(s) de entrenamiento
-# posibles funciones a usar
+lower_blue = np.array([90, 60, 60])
+upper_blue = np.array([255, 255, 255])
+lower_red1 = np.array([0, 65, 75])
+upper_red1 = np.array([12, 255, 255])
+lower_red2 = np.array([240, 65, 75])
+upper_red2 = np.array([255, 255, 255])
 
+name = 'segmentation.mp4'
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter(name, fourcc, 30, (320 * 2, 240 * 2))
 
-# cv2.imshow("Frame", frame)
-# capture.release()
-# cv2.destroyWindow("Frame")
-
-# Si deseas mostrar la imagen con funciones de matplotlib posiblemente haya que cambiar
-# el formato, con
-# cv2.cvtColor(frame, code=CV_RGB2GRAY)
-
-# Esta funcion del paquete "select_pixels" pinta los pixeles en la imagen
-# Puede ser util para el entrenamiento
-
-# markImg = sel.select_fg_bg(frame)
-
-# Tambien puedes mostrar imagenes con las funciones de matplotlib
-# plt.imshow(markImg)
-# plt.show()
-
-# Si deseas guardar alguna imagen ....
-
-# imsave('lineaMarcada.png', markImg)
-
-# The order of the colors is blue, green, red
 while capture.isOpened():
     ret, frame = capture.read()
 
-    lower_blue = np.array([110, 50, 50])
-    upper_blue = np.array([255, 255, 255])
-
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    mask = cv2.inRange(hsv, lower_blue, upper_blue)
-    res = cv2.bitwise_and(frame, frame, mask=mask)
+
+    mask_line = cv2.inRange(hsv, lower_blue, upper_blue)
+    res_line = cv2.bitwise_and(frame, frame, mask=mask_line)
+
+    mask_r1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask_r2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask_arrow = cv2.add(mask_r1, mask_r2)
+    res_arrow = cv2.bitwise_and(frame, frame, mask=mask_arrow)
+
+    mask_final = cv2.add(mask_line, mask_arrow)
+    res = cv2.bitwise_and(frame, frame, mask=mask_final)
+
     cv2.imshow('original', frame)
-    cv2.imshow('Gray', gray)
-    cv2.imshow('mask', mask)
+    cv2.imshow('res_line', res_line)
+    cv2.imshow('res_arrow', res_arrow)
     cv2.imshow('res', res)
+
+    top = np.concatenate((frame, res), axis=1)
+    bottom = np.concatenate((res_line, res_arrow), axis=1)
+    total = np.concatenate((top, bottom), axis=0)
+    out.write(total)
+    cv2.imshow('total', total)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+out.release()
+cv2.destroyAllWindows()
