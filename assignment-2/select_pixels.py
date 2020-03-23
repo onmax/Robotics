@@ -1,7 +1,7 @@
 #######################################################################
 # This code lets you paint on top of an image and returns the painted image
 # it can be used to select pixels somehow in an image
-# 
+#
 # It requires that you install "python-pygame" and "python-opencv"
 #
 # The interesting funcion here is "select_fg_bg" read documentation below
@@ -10,14 +10,16 @@ import pygame
 import numpy as np
 import cv2
 
+
 def roundline(srf, color, start, end, radius=1):
     dx = end[0]-start[0]
     dy = end[1]-start[1]
     distance = max(abs(dx), abs(dy))
     for i in range(distance):
-        x = int( start[0]+float(i)/distance*dx)
-        y = int( start[1]+float(i)/distance*dy)
+        x = int(start[0]+float(i)/distance*dx)
+        y = int(start[1]+float(i)/distance*dy)
         pygame.draw.circle(srf, color, (x, y), radius)
+
 
 def select_fg_bg(img, radio=2):
     """ Shows image img on a window and lets you mark in red, green and blue 
@@ -31,27 +33,27 @@ def select_fg_bg(img, radio=2):
     screen = pygame.display.set_mode(img.shape[-2::-1])
 
 #    imgpyg=pygame.image.load(imgName)
-    imgpyg=pygame.image.frombuffer(img,img.shape[-2::-1],'RGB')
-    screen.blit(imgpyg,(0,0))
-    pygame.display.flip() # update the display
+    imgpyg = pygame.image.frombuffer(img, img.shape[-2::-1], 'RGB')
+    screen.blit(imgpyg, (0, 0))
+    pygame.display.flip()  # update the display
 
     draw_on = False
     last_pos = (0, 0)
     color_red = (255, 0, 0)
-    color_green = (0,255,0)
-    color_blue = (0,0,255)
+    color_green = (0, 255, 0)
+    color_blue = (0, 0, 255)
 
     while True:
         e = pygame.event.wait()
         if e.type == pygame.QUIT:
-            break;
+            break
         if e.type == pygame.MOUSEBUTTONDOWN:
             if pygame.mouse.get_pressed()[0]:
-                color=color_red
+                color = color_red
             elif pygame.mouse.get_pressed()[2]:
-                color=color_green
+                color = color_green
             else:
-                color=color_blue
+                color = color_blue
             pygame.draw.circle(screen, color, e.pos, radio)
             draw_on = True
         if e.type == pygame.MOUSEBUTTONUP:
@@ -63,8 +65,11 @@ def select_fg_bg(img, radio=2):
             last_pos = e.pos
         pygame.display.flip()
 
-    imgOut=np.ndarray(shape=img.shape[:2]+(4,),dtype='u1',buffer=screen.get_buffer().raw)
+    imgOut = np.ndarray(
+        shape=img.shape[:2]+(4,), dtype='u1', buffer=screen.get_buffer().raw)
     pygame.quit()
 
-    return(cv2.cvtColor(imgOut[:,:,:3],cv2.COLOR_BGR2RGB))
+    return(cv2.cvtColor(imgOut[:, :, :3], cv2.COLOR_BGR2RGB))
 
+# pygame 1.9.6
+# Hello from the pygame community. https://www.pygame.org/contribute.html
