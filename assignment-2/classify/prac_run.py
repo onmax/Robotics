@@ -44,10 +44,10 @@ def normalized_img(a):
     return np.rollaxis((np.rollaxis(a, 2)+0.0)/np.sum(a, 2), 0, 3)[:, :, :2]
 
 
+c = 0
 name = 'segmentation.mp4'
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter(name, fourcc, 30, (WIDTH * 2, HEIGHT * 2))
-
+out = cv2.VideoWriter(name, fourcc, 30, (WIDTH, HEIGHT))
 clf = load('./assignment-2/classify/training/model/classifier2d.joblib')
 while cap.isOpened():
     ret, frame = cap.read()
@@ -65,11 +65,11 @@ while cap.isOpened():
                 labels_image.append([255, 0, 0])
         img_sections = np.array(
             labels_image, dtype=np.uint8).reshape((WIDTH, HEIGHT, 3))
-        # cv2.imshow("Sections", img_sections)
         out.write(img_sections)
-
-        cap.set(1, count * 25)
+        c += 1
+        cap.set(1, c * 25)
     else:
         cap.release()
         break
 out.release()
+cv2.destroyAllWindows()
