@@ -51,9 +51,9 @@ def open_images(indexes):
 
     for i in indexes:
         image = np.array(imageio.imread(
-            "../images/originals/frame-{}.png".format(i)))
+            "./images/originals/frame-{}.png".format(i)))
         section = np.array(imageio.imread(
-            "../images/sections/frame-{}.png".format(i)))
+            "./images/sections/frame-{}.png".format(i)))
 
         d["image"] = np.append(d["image"], image)
         d["section"] = np.append(d["section"], section)
