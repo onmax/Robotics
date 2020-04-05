@@ -2,6 +2,8 @@ import cv2
 from matplotlib import pyplot as plt
 import numpy as np
 from joblib import load
+import time
+
 
 capture = cv2.VideoCapture("./assignment-2/input/video1.mp4")
 
@@ -9,7 +11,7 @@ WIDTH = 320
 HEIGHT = 240
 
 cap = cv2.VideoCapture(
-    './assignment-2/input/{}'.format("video1.mp4"))
+    '../input/{}'.format("video1.mp4"))
 count = 1
 
 lower_blue = np.array([90, 60, 60])
@@ -48,26 +50,27 @@ c = 0
 name = 'segmentation.mp4'
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter(name, fourcc, 30, (WIDTH, HEIGHT))
-clf = load('./assignment-2/classify/training/model/classifier2d.joblib')
+clf = load('./training/model/classifier.joblib')
 while cap.isOpened():
     ret, frame = cap.read()
     if ret:
+        start = time.time()
         normalized = normalized_img(frame)
         labels = clf.predict(normalized.reshape((-1, 2)))
+        labels = labels.reshape(frame.shape[:2])
+        img_out = np.empty(frame.shape, dtype=np.uint8)
+        img_out[labels == 'bck'] = [0, 255, 0]
+        img_out[labels == 'line'] = [0, 0, 255]
+        img_out[labels == 'sign'] = [255, 0, 0]
+        cv2.imshow("Imagen", img_out)
 
-        labels_image = []
-        for label in labels:
-            if label == 'bck':
-                labels_image.append([0, 255, 0])
-            elif label == 'line':
-                labels_image.append([0, 0, 255])
-            elif label == 'sign':
-                labels_image.append([255, 0, 0])
-        img_sections = np.array(
-            labels_image, dtype=np.uint8).reshape((WIDTH, HEIGHT, 3))
-        out.write(img_sections)
+        out.write(img_out)
         c += 1
         cap.set(1, c * 25)
+        end = time.time()
+
+        print("Time:", end - start)
+        cv2.waitKey()
     else:
         cap.release()
         break

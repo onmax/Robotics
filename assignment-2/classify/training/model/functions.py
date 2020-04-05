@@ -41,7 +41,7 @@ def get_probabilities(shape, input_prob):
     return ff, prob
 
 
-def get_matrices(normalized, section, distances, test3d, size):
+def get_matrices(normalized, section, distances, size):
     sign = normalized[np.where(
         np.all(np.equal(section, (255, 0, 0)), 2))]
     sign_distance = distances[np.where(
@@ -61,21 +61,14 @@ def get_matrices(normalized, section, distances, test3d, size):
     line = np.insert(line, 2, line_distance, axis=1)
 
     sign, bck, line = remove_random_pixels(
-        sign, bck, line, test3d, size)
+        sign, bck, line, size)
     return sign, bck, line
 
 
-def remove_random_pixels(sign, bck, line, test3d, size):
-
-    # We want the values closer to the conflicts
-    if test3d:
-        ff, prob = get_probabilities(bck.shape[0], 0.99995)
-        ff[np.where(np.all([bck[:, 2] < 5, prob < 0.6]))] = True
-        bck = bck[np.where(ff)]
-    else:
-        ff, prob = get_probabilities(
-            bck.shape[0], 1 - (size / bck.shape[0]))  # 0.9997
-        bck = bck[np.where(ff)]
+def remove_random_pixels(sign, bck, line, size):
+    ff, prob = get_probabilities(
+        bck.shape[0], 1 - (size / bck.shape[0]) * 1.4)  # 0.9997
+    bck = bck[np.where(ff)]
 
     # remove useless some blue
     if line.shape[0] != 0:
@@ -85,7 +78,7 @@ def remove_random_pixels(sign, bck, line, test3d, size):
 
     if sign.shape[0] != 0:
         ff, prob = get_probabilities(
-            sign.shape[0], 1 - (size / sign.shape[0]))  # 0.5
+            sign.shape[0], 1 - (size / sign.shape[0]) * 0.05)  # 0.5
         sign = sign[np.where(ff)]
 
     return sign, bck, line
@@ -123,7 +116,7 @@ def predict(clf, data):
     return clf.predict(data)
 
 
-def get_all_confusion_matrixes(test_indexes, clf, test3d=False):
+def get_all_confusion_matrixes(test_indexes, clf):
     confusion_matrices = []
     times = []
     for (index, i) in enumerate(test_indexes):
@@ -135,11 +128,7 @@ def get_all_confusion_matrixes(test_indexes, clf, test3d=False):
 
         normalized = normalized_img(image)
 
-        if test3d:
-            distances = get_distances(section)
-            data = np.insert(normalized, 2, distances, axis=2).reshape(-1, 3)
-        else:
-            data = normalized.reshape(-1, 2)
+        data = normalized.reshape(-1, 2)
 
         start = time.time()
         predictions = predict(clf, data)
@@ -181,6 +170,9 @@ def get_stats(cms, times):
     }
 
     cm = gen_confusion_matrix["all"]
+    lines = gen_confusion_matrix["line"]
     print("Mean time: {}".format(times.mean()))
     print("Overall precision", (cm['tp'] + cm['tn']) /
           (cm['tp'] + cm['tn'] + cm['fp'] + cm['fn']))
+    print("Lines precision", (lines['tp'] + lines['tn']) /
+          (lines['tp'] + lines['tn'] + lines['fp'] + lines['fn']))
