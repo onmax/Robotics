@@ -7,6 +7,10 @@ from sklearn import discriminant_analysis as da
 
 
 class Model:
+    '''
+    The purpose of this class is to train the model of the classifier. At the end of the constructor it will save the model in a file, so it won't be necessary to be creating the model every time.
+    '''
+
     def __init__(self):
         super().__init__()
         self.set_dfs()
@@ -14,10 +18,14 @@ class Model:
         dump(self.clf, './classifier.joblib')
 
     def set_dfs(self):
+        '''
+        Set the dataframes. It loads the frames within the folder image with the following indexes and for each of them will load.
+        See open_images doc to see the return type
+        '''
         frame_numbers = np.array(
             [12, 25, 35, 36, 39, 46, 53, 71, 82, 108, 112, 121, 125, 137, 158, 170, 181])
         self.train_df = open_images(frame_numbers)
-    
+
     def feature_selection(data):
         pass
 

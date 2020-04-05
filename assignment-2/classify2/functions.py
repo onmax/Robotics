@@ -28,7 +28,21 @@ def labels2img(frame, labels):
 
 
 def open_images(indexes):
-
+    '''
+    Return a dictionary containing:
+        - image: An array of all the pixels. 
+            The shape of the array is: len(frame_numbers) x width x height x 3 
+        - section: An array of all the different sections. Only contains one of the following colors:
+            - Red: symbol
+            - Green: background
+            - Blue: line.
+            The shape of the array is: len(frame_numbers) x width x height x 3
+        normalized: An array of all the pixels
+            The shape of the array is: len(frame_numbers) x width x height x 2
+        labels: An array of all the pixels labeled
+            It will contain: 'b', 'l' or 's'
+            The shape of the array is: len(frame_numbers) x width x height x 1 
+    '''
     d = {
         'image': np.array([], dtype=np.uint8),
         'section': np.array([], dtype=np.uint8),
@@ -38,9 +52,9 @@ def open_images(indexes):
 
     for i in indexes:
         image = np.array(imageio.imread(
-            "D:/proyectos/robotics/assignment-2/classify/training/images/originals/frame-{}.png".format(i)))
+            "../classify/training/images/originals/frame-{}.png".format(i)))
         section = np.array(imageio.imread(
-            "D:/proyectos/robotics/assignment-2/classify/training/images/sections/frame-{}.png".format(i)))
+            "../classify/training/images/sections/frame-{}.png".format(i)))
 
         d["image"] = np.append(d["image"], image)
         d["section"] = np.append(d["section"], section)
