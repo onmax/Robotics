@@ -2,6 +2,7 @@ import numpy as np
 import imageio
 import cv2
 from sklearn.preprocessing import StandardScaler
+from matplotlib import pyplot as plt
 
 
 def normalized_img(a):
@@ -29,8 +30,8 @@ def labels2img(frame, labels):
 def open_images(indexes):
     '''
     Return a dictionary containing:
-        - image: An array of all the pixels. 
-            The shape of the array is: len(frame_numbers) x width x height x 3 
+        - image: An array of all the pixels.
+            The shape of the array is: len(frame_numbers) x width x height x 3
         - section: An array of all the different sections. Only contains one of the following colors:
             - Red: symbol
             - Green: background
@@ -40,7 +41,7 @@ def open_images(indexes):
             The shape of the array is: len(frame_numbers) x width x height x 2
         labels: An array of all the pixels labeled
             It will contain: 'b', 'l' or 's'
-            The shape of the array is: len(frame_numbers) x width x height x 1 
+            The shape of the array is: len(frame_numbers) x width x height x 1
     '''
     d = {
         'image': np.array([], dtype=np.uint8),
@@ -71,3 +72,21 @@ def open_images(indexes):
     d["normalized"] = scaler.fit_transform(d["normalized"])
 
     return d
+
+
+def plot(pixels, sections):
+    data_symbol = pixels[np.where(
+        np.all(np.equal(sections, (255, 0, 0)), 1))]
+    data_background = pixels[np.where(
+        np.all(np.equal(sections, (0, 255, 0)), 1))]
+    data_lines = pixels[np.where(
+        np.all(np.equal(sections, (0, 0, 255)), 1))]
+
+    plt.figure()
+    plt.plot(data_symbol[:, 0], data_symbol[:, 1], 'r.', label='Symbol')
+    plt.plot(data_background[:, 0],
+             data_background[:, 1], 'g.', label='Background')
+    plt.plot(data_lines[:, 0], data_lines[:, 1], 'b.', label='Lines')
+    plt.title('Normalized RGB')
+
+    plt.show()

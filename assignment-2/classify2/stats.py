@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix
 from joblib import load
-from functions import open_images
+from functions import open_images, plot
 import time
 
 
@@ -9,6 +9,8 @@ class Stats:
     def __init__(self):
         super().__init__()
         self.set_dfs()
+        plot(self.test_df["normalized"], self.test_df["section"])
+
         self.clf = load('./classifier.joblib')
         self.test_model()
 
