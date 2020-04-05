@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import imageio
 import cv2
 from sklearn.preprocessing import StandardScaler
@@ -52,9 +51,9 @@ def open_images(indexes):
 
     for i in indexes:
         image = np.array(imageio.imread(
-            "../classify/training/images/originals/frame-{}.png".format(i)))
+            "../images/originals/frame-{}.png".format(i)))
         section = np.array(imageio.imread(
-            "../classify/training/images/sections/frame-{}.png".format(i)))
+            "../images/sections/frame-{}.png".format(i)))
 
         d["image"] = np.append(d["image"], image)
         d["section"] = np.append(d["section"], section)
@@ -69,6 +68,6 @@ def open_images(indexes):
 
     scaler = StandardScaler()
     d["normalized"] = d["normalized"].reshape((-1, 2))
-    d["normalized"] = scaler.transform(d["normalized"])
+    d["normalized"] = scaler.fit_transform(d["normalized"])
 
     return d

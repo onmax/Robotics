@@ -22,8 +22,9 @@ class Model:
         Set the dataframes. It loads the frames within the folder image with the following indexes and for each of them will load.
         See open_images doc to see the return type
         '''
-        frame_numbers = np.array(
-            [12, 25, 35, 36, 39, 46, 53, 71, 82, 108, 112, 121, 125, 137, 158, 170, 181])
+        # frame_numbers = np.array(
+        # [12, 25, 35, 36, 39, 46, 53, 71, 82, 108, 112, 121, 125, 137, 158, 170, 181])
+        frame_numbers = np.arange(1, 69)
         self.train_df = open_images(frame_numbers)
 
     def feature_selection(data):
@@ -37,9 +38,6 @@ class Model:
 
         # self.clf = svm.SVC()
         # self.clf.fit(pixels_normalized, labels)
-
-        X_train = self.scaler.fit_transform(pixels_normalized, labels)
-        X_test = self.scaler.transform(X_test)
 
         self.clf = da.QuadraticDiscriminantAnalysis().fit(pixels_normalized, labels)
 

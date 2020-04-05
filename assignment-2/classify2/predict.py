@@ -21,7 +21,7 @@ class Predict:
             ret, frame = capture.read()
             if ret:
                 normalized = frame
-                labels = self.clf.predict(normalized.reshape((-1, 3)))
+                labels = self.clf.predict(normalized.reshape((-1, 2)))
                 img_out = labels2img(frame, labels)
                 out.write(img_out)
             else:

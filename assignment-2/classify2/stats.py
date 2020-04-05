@@ -14,14 +14,14 @@ class Stats:
 
     def set_dfs(self):
         print("Reading images...")
-        self.frame_numbers = np.arange(1, 186)
+        self.frame_numbers = np.arange(70, 186)
         self.test_df = open_images(self.frame_numbers)
 
     def test_model(self):
         print("Predicting...")
         start = time.time()
 
-        pixels_normalized = self.test_df["image"]
+        pixels_normalized = self.test_df["normalized"]
 
         predicted = self.clf.predict(pixels_normalized)
 
