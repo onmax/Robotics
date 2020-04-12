@@ -36,7 +36,7 @@ class Segmentation:
         capture = cv2.VideoCapture("../input/" + self.video_name)
         while capture.isOpened():
             # 1240, 240, 0, 1720, 800, 600, 1300, 1500
-            # capture.set(1,0); 
+            # capture.set(1,240); 
             one_frame = False
             ret, frame = capture.read()
             if ret:

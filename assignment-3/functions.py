@@ -139,18 +139,11 @@ def get_scene_context(img, frame):
     if len(defects) == 0:
         return "Recto", frame
     elif len(defects) == 1 or len(defects) == 2:
-        b = np.array([contour[defects[0][0]]])[0][0]
-        a = np.array([contour[defects[0][1]]])[0][0]
-        c = np.array([contour[defects[0][2]]])[0][0]
-
-        ba = a - b
-        bc = c - b
-
-        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-        angle = np.arccos(cosine_angle)
-
-        direction = "derecha" if angle > 0 else "izquierda"
-        return "Curva " + direction + " " + str(cosine_angle), frame
+        s = np.array([contour[defects[0][0]]])[0][0][0]
+        e = np.array([contour[defects[0][1]]])[0][0][0]
+        m = np.array([contour[defects[0][2]]])[0][0][0]
+        direction = "derecha" if e - s < m else "izquierda"
+        return "Curva " + direction, frame
     elif len(defects) == 3:
         return "Cruce 2 salidas", frame
     else:
