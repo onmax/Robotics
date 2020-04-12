@@ -3,7 +3,7 @@ import imageio
 import cv2
 from sklearn.preprocessing import StandardScaler
 from matplotlib import pyplot as plt
-
+import time
 
 def normalized_img(a):
     return np.rollaxis((np.rollaxis(a, 2) + 0.0) / np.sum(a, 2), 0, 3)[:, :, :2]
@@ -26,6 +26,15 @@ def labels2img(frame, labels):
     img_out = cv2.cvtColor(img_out, cv2.COLOR_RGB2BGR)
     return img_out
 
+def labelsN2img(frame, labels):
+    labels = labels.reshape(frame.shape[:2])
+    img_out = np.empty(frame.shape, dtype=np.uint8)
+    labels = labels.astype('<U1')
+    img_out[np.where(labels == '0')] = [0, 255, 0]
+    img_out[np.where(labels == '1')] = [0, 0, 255]
+    img_out[np.where(labels == '2')] = [255, 0, 0]
+    img_out = cv2.cvtColor(img_out, cv2.COLOR_RGB2BGR)
+    return img_out
 
 def open_images(indexes):
     '''
@@ -43,6 +52,8 @@ def open_images(indexes):
             It will contain: 'b', 'l' or 's'
             The shape of the array is: len(frame_numbers) x width x height x 1
     '''
+    print("Reading images...")
+
     d = {
         'image': np.array([], dtype=np.uint8),
         'section': np.array([], dtype=np.uint8),
@@ -66,13 +77,13 @@ def open_images(indexes):
     d["image"] = d["image"].reshape((-1, 3))
     d["section"] = d["section"].reshape((-1, 3))
     d["normalized"] = d["normalized"].reshape((-1, 2))
-
-    scaler = StandardScaler()
-    d["normalized"] = d["normalized"].reshape((-1, 2))
-    d["normalized"] = scaler.fit_transform(d["normalized"])
-
     return d
 
+def predicted_in(start, n_frames):
+    end = time.time()
+    n_seconds = end - start
+    print("Predicted in {} seconds {} frames. That is {} seconds/frame".format(
+        n_seconds, n_frames, n_seconds / n_frames))
 
 def plot(pixels, sections):
     data_symbol = pixels[np.where(

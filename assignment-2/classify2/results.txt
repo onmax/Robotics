@@ -1,0 +1,127 @@
+Reading images...
+CLF kneighbors
+Predicting...
+Predicted in 425.110955953598 seconds 116 frames. That is 3.664749620289638 seconds/frame
+Full confusion matrix
+ [[7898909    1349     109]
+ [  14520   48412      17]
+ [  34800      19  910665]]
+Precission:
+Background: 99.98155%
+Symbol: 96.31734%
+Line: 76.9067%
+
+
+
+CLF mlpclass
+Predicting...
+Predicted in 4.2685017585754395 seconds 116 frames. That is 0.036797428953236545 seconds/frame
+Full confusion matrix
+ [[7897311       0    3056]
+ [   1413       0   61536]
+ [ 231362       0  714122]]
+Precission:
+Background: 99.96132%
+Symbol: 75.52978%
+Line: 0.0%
+
+
+
+
+CLF randomforest
+Predicting...
+Predicted in 71.0070128440857 seconds 116 frames. That is 0.6121294210697042 seconds/frame
+Full confusion matrix
+ [[7900265      14      88]
+ [  17759   45190       0]
+ [  35052       2  910430]]
+Precission:
+Background: 99.99871%
+Symbol: 96.29248%
+Line: 71.78827%
+
+
+
+CLF adaboost
+Predicting...
+Predicted in 97.95404624938965 seconds 116 frames. That is 0.8444314331843935 seconds/frame
+Full confusion matrix
+ [[7896138    4229       0]
+ [  11946   50986      17]
+ [ 945478       6       0]]
+Precission:
+Background: 99.94647%
+Symbol: 0.0%
+Line: 80.99573%
+
+
+CLF Euclidian distance with 3 normalized
+Predicting...
+Predicted in 10.605657577514648 seconds 185 frames. That is 0.057327878797376476 seconds/frame
+Full confusion matrix
+ [[12751802     7730     1612]
+ [    4825    69083        0]
+ [   28836      111  1344001]]
+Precission:
+Background: 99.92679%
+Symbol: 97.89162%
+Line: 93.47161%
+
+----
+
+CLF qda
+Predicting...
+Predicted in 3.3410918712615967 seconds 116 frames. That is 0.028802516131565488 seconds/frame
+Full confusion matrix
+ [[7888536    7157    4674]
+ [    599   62338      12]
+ [   9922      98  935464]]
+Precission:
+Background: 99.85025%
+Symbol: 98.94023%
+Line: 99.02937%
+
+
+
+
+
+Reading images...
+CLF decisiontree
+Predicting...
+Predicted in 0.6992495059967041 seconds 116 frames. That is 0.006028012982730208 seconds/frame
+Full confusion matrix
+ [[7900248      23      96]
+ [  14610   48339       0]
+ [  34862      16  910606]]
+Precission:
+Background: 99.99849%
+Symbol: 96.3111%
+Line: 76.79074%
+
+
+
+CLF gaussian
+Predicting...
+Predicted in 2.886066436767578 seconds 116 frames. That is 0.02487988307558257 seconds/frame
+Full confusion matrix
+ [[7891125    3271    5971]
+ [    815   59852    2282]
+ [   9310      96  936078]]
+Precission:
+Background: 99.88302%
+Symbol: 99.00517%
+Line: 95.08014%
+
+
+
+CLF Euclidian distance with 2 normalized
+Predicting...
+Predicted in 9.796929836273193 seconds 185 frames. That is 0.052956377493368616 seconds/frame
+Full confusion matrix
+ [[12751448     6825     2871]
+ [    3173    70735        0]
+ [   34686      134  1338128]]
+Precission:
+Background: 99.92402%
+Symbol: 97.46385%
+Line: 95.70682%

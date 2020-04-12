@@ -1,5 +1,7 @@
 pygame
 numpy
-scipy
+scipy==1.2.0
 matplotlib
 opencv-python
+sklearn
+imageio

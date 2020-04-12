@@ -136,3 +136,9 @@ pyrobot
 *.mp4
 
 *.png
+
+*.jpg
+
+*.avi
+
+*/images/*
