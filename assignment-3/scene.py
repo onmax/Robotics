@@ -3,7 +3,6 @@ import cv2
 from functions import *
 import time
 import os
-import shutil
 import cv2
 
 class Scene:
@@ -18,15 +17,9 @@ class Scene:
 
 
     def save_video(self):
-        N_FRAMES = 400000 # Just to speed up the process. Should be removed
 
-        #TEMP
-        save_frame = False
-        if save_frame:
-            path = "../output/frames/"
-            if os.path.exists(path):
-                shutil.rmtree(path)
-            os.makedirs(path)
+        path = "../output"
+        os.makedirs(path)
 
         start = time.time()
         n_frames = 0
@@ -37,9 +30,6 @@ class Scene:
 
         capture = cv2.VideoCapture("../input/" + self.video_name)
         while capture.isOpened():
-            # 1240, 240, 0, 1720, 800, 600, 1300, 1500
-            # capture.set(1,1895); 
-            one_frame = False
             ret, frame = capture.read()
             if ret:
                 img_out = get_segmented_img(self.clf, frame)
@@ -50,15 +40,8 @@ class Scene:
                 frame = cv2.resize(frame, (frame.shape[1] * 4, frame.shape[0] * 4))
                 frame = write_text(frame, texts + boundaries)
                 out.write(frame)
-                if save_frame:
-                    cv2.imwrite("{}/frame-{:d}.jpg".format(path, n_frames), frame)
                 n_frames += 1
 
-                
-                # Should be removed
-                if one_frame or n_frames == N_FRAMES:
-                    capture.release()
-                    break
             else:
                 capture.release()
                 break
