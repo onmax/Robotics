@@ -21,10 +21,12 @@ class Segmentation:
         N_FRAMES = 400000 # Just to speed up the process. Should be removed
 
         #TEMP
-        path = "../output/frames/"
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        os.makedirs(path)
+        save_frame = False
+        if save_frame:
+            path = "../output/frames/"
+            if os.path.exists(path):
+                shutil.rmtree(path)
+            os.makedirs(path)
 
         start = time.time()
         n_frames = 0
@@ -36,17 +38,19 @@ class Segmentation:
         capture = cv2.VideoCapture("../input/" + self.video_name)
         while capture.isOpened():
             # 1240, 240, 0, 1720, 800, 600, 1300, 1500
-            # capture.set(1,240); 
+            # capture.set(1,1895); 
             one_frame = False
             ret, frame = capture.read()
             if ret:
                 img_out = get_segmented_img(self.clf, frame)
                 # img_out = apply_gaussian_filter(img_out)
-                direction, frame = get_scene_context(img_out, frame)
+                # remove blur
+                texts, frame = get_scene_context(img_out, frame)
                 frame = cv2.resize(frame, (frame.shape[1] * 4, frame.shape[0] * 4))
-                frame = write_text(frame, direction)
+                frame = write_text(frame, texts)
                 out.write(frame)
-                cv2.imwrite("{}/frame-{:d}.jpg".format(path, n_frames), frame)
+                if save_frame:
+                    cv2.imwrite("{}/frame-{:d}.jpg".format(path, n_frames), frame)
                 n_frames += 1
 
                 

@@ -102,22 +102,60 @@ def get_segmented_img(clf, frame):
 def apply_gaussian_filter(img):
     return cv2.GaussianBlur(img, (13, 13),0)
 
-def get_box(contour):
-    rect = cv2.minAreaRect(contour)
-    box = cv2.boxPoints(rect)
-    box = np.int0(box)
-    return box
 
+def detect_curve(contour, defects, i=0):
+    # This funciton could be improved
+    s = np.array([contour[defects[i][0]]])[0][0][0]
+    e = np.array([contour[defects[i][1]]])[0][0][0]
+    m = np.array([contour[defects[i][2]]])[0][0][0]
+    direction = "derecha" if e - s < m else "izquierda"
+    return direction
 
+def distance(p1, p2):
+    return (sum([(a - b) ** 2 for a, b in zip(p1, p2)]))**0.5
+
+def get_paths_boundaries(x):
+    # This function wil read how many changes are in a array
+    # i.e. => [0, 255, 255, 255, 0, 255, 255, 0]
+    #           ^              ^  ^         ^
+    # There are 4 changes => 2 paths. If the last and the first are differents is also a change.
+    # print( (np.diff(x, axis=0) == 255))
+    return int((np.diff(x[np.any(x != [0, 0, 255], -1)], axis=0) == 255).sum() / 2)
+
+def detect_closeness(contour, defects):
+    # Gets the distance between the three points
+    mids = [np.array([contour[d[2]]])[0][0] for d in defects]
+    distances = np.array([distance(p1, p2) for i, p1 in enumerate(mids) for p2 in mids[i+1:]])
+
+    # Number of curves
+    curves = [i for i, dist in enumerate(distances) if dist > 50]
+    n_curves = len(curves)
+
+    n_in_a_cross = len(distances) - n_curves
+    
+    # A point can only be in a cross or curve. So, if the points does not belong to a
+    # cross, then it is a curve 
+    return n_curves, n_in_a_cross, curves
 
 def get_scene_context(img, frame):
-    # _img = copy.copy(img)
+
+    paths = {
+        "Arriba": get_paths_boundaries(img[0,:]),
+        "Abajo": get_paths_boundaries(img[-1,:]),
+        "Derecha": get_paths_boundaries(img[:,-1]),
+        "Izquierda": get_paths_boundaries(img[:,0])
+    }
+    
+    boundaries = []
+    for p in paths:
+        if paths[p] > 0:
+            boundaries.append("{}: {}".format(p, paths[p]))
 
     img_bw = np.all(img == [255, 0, 0], axis=-1).astype(np.uint8)[90:,:] * 255
     contours, _  = cv2.findContours(img_bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
     if len(contours) == 0:
-        return "Nada", frame
+        return ["Nada"], frame
 
     chull_list = [cv2.convexHull(contour,returnPoints=False) for contour in contours]
     all_defects = [cv2.convexityDefects(contour, chull) for (contour,chull) in zip(contours, chull_list)]
@@ -137,33 +175,54 @@ def get_scene_context(img, frame):
         cv2.circle(frame, (contour[m][0][0], contour[m][0][1] + 90), 5,[120,120,255],-1)
 
     if len(defects) == 0:
-        return "Recto", frame
-    elif len(defects) == 1 or len(defects) == 2:
-        s = np.array([contour[defects[0][0]]])[0][0][0]
-        e = np.array([contour[defects[0][1]]])[0][0][0]
-        m = np.array([contour[defects[0][2]]])[0][0][0]
-        direction = "derecha" if e - s < m else "izquierda"
-        return "Curva " + direction, frame
+        text = ["Recto"]
+    elif len(defects) == 1:
+        direction = detect_curve(contour, defects)
+        text = ["Curva " + direction]
+    elif len(defects) == 2:
+        n_curves = detect_closeness(contour, defects)
+        if n_curves == 2:
+            direction1 = detect_curve(contour, defects, 0)
+            direction2 = detect_curve(contour, defects, 1)
+            text = ["Curva " + direction1, "Curva " + direction2]
+        else:
+            text = ["Cruce 2 salidas"]
     elif len(defects) == 3:
-        return "Cruce 2 salidas", frame
+        n_curves, n_in_a_cross, curves_indexes = detect_closeness(contour, defects)
+        if n_curves == 3:
+            direction1 = detect_curve(contour, defects, 0)
+            direction2 = detect_curve(contour, defects, 1)
+            direction3 = detect_curve(contour, defects, 2)
+            text = ["Curva " + direction1, "Curva " + direction2, "Curva " + direction3]
+        elif n_curves == 1:
+            direction = detect_curve(contour, defects, curves_indexes[0])
+            text = ["Cruce dos salidas", "Curva " + direction]
+        else:
+            text = ["Cruce dos salidas"]
     else:
-        return "Cruce 3 salidas", frame
+        text = ["Cruce tres salidas"]
+    return text + boundaries, frame
 
 
-def write_text(img, text):
+def write_text(img, texts):
     # https://gist.github.com/aplz/fd34707deffb208f367808aade7e5d5c
     bck = (0, 0, 0)
     color = (255, 255, 255)
     
     font = cv2.FONT_HERSHEY_SIMPLEX 
     font_scale = 0.7
-    (text_width, text_height) = cv2.getTextSize(text, font, fontScale=font_scale, thickness=1)[0]
+    texts_sizes = [cv2.getTextSize(text, font, fontScale=font_scale, thickness=1)[0] for text in texts]
+
+    text_width, text_height = max([s[0] for s in texts_sizes]), sum([s[1] for s in texts_sizes]) + 10 * (len(texts) - 1)
 
     padding = 6
     box_coords = ((0,0), (text_width + padding, text_height + padding + 15))
 
     img = cv2.rectangle(img, box_coords[0], box_coords[1], bck, cv2.FILLED)
-    img = cv2.putText(img, text, (padding, padding + 15), font, fontScale=font_scale, color=color, thickness=1)
+    
+    for i, text in enumerate(texts):
+        padding_top = 0 if i == 0 else sum(s[1] for s in texts_sizes[:i]) + 10 * i
+        img = cv2.putText(img, text, (padding, padding + 15 + padding_top), font, fontScale=font_scale, color=color, thickness=1)
 
     return img
    
