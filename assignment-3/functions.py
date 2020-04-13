@@ -136,9 +136,7 @@ def detect_closeness(contour, defects):
     # A point can only be in a cross or curve. So, if the points does not belong to a
     # cross, then it is a curve 
     return n_curves, n_in_a_cross, curves
-
-def get_scene_context(img, frame):
-
+def detect_boundaries(img):
     paths = {
         "Arriba": get_paths_boundaries(img[0,:]),
         "Abajo": get_paths_boundaries(img[-1,:]),
@@ -150,7 +148,9 @@ def get_scene_context(img, frame):
     for p in paths:
         if paths[p] > 0:
             boundaries.append("{}: {}".format(p, paths[p]))
+    return boundaries
 
+def get_scene_context(img, frame):
     img_bw = np.all(img == [255, 0, 0], axis=-1).astype(np.uint8)[90:,:] * 255
     contours, _  = cv2.findContours(img_bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
@@ -201,7 +201,7 @@ def get_scene_context(img, frame):
             text = ["Cruce dos salidas"]
     else:
         text = ["Cruce tres salidas"]
-    return text + boundaries, frame
+    return text, frame
 
 
 def write_text(img, texts):

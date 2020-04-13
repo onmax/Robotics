@@ -6,7 +6,7 @@ import os
 import shutil
 import cv2
 
-class Segmentation:
+class Scene:
     def __init__(self):
         super().__init__()
 
@@ -45,9 +45,10 @@ class Segmentation:
                 img_out = get_segmented_img(self.clf, frame)
                 # img_out = apply_gaussian_filter(img_out)
                 # remove blur
+                boundaries = detect_boundaries(img_out)
                 texts, frame = get_scene_context(img_out, frame)
                 frame = cv2.resize(frame, (frame.shape[1] * 4, frame.shape[0] * 4))
-                frame = write_text(frame, texts)
+                frame = write_text(frame, texts + boundaries)
                 out.write(frame)
                 if save_frame:
                     cv2.imwrite("{}/frame-{:d}.jpg".format(path, n_frames), frame)

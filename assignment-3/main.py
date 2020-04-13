@@ -1,5 +1,5 @@
 import sys
-from segmentation import Segmentation
+from scene import Scene
 
-if "--segmentation" in sys.argv:
-    Segmentation()
+if "--scene" in sys.argv:
+    Scene()
