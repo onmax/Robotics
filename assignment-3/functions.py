@@ -104,7 +104,7 @@ def apply_gaussian_filter(img):
 
 
 def detect_curve(contour, defects, i=0):
-    # This funciton could be improved
+    # This funciton could be improved 
     s = np.array([contour[defects[i][0]]])[0][0][0]
     e = np.array([contour[defects[i][1]]])[0][0][0]
     m = np.array([contour[defects[i][2]]])[0][0][0]
@@ -161,7 +161,7 @@ def get_scene_context(img, frame):
     all_defects = [cv2.convexityDefects(contour, chull) for (contour,chull) in zip(contours, chull_list)]
 
     if len(all_defects) == 0 or np.all(np.equal(all_defects[0], None)):
-        return "Recto", frame
+        return ["Recto"], frame
 
     contour = contours[0]
     defects = all_defects[0]
@@ -170,9 +170,9 @@ def get_scene_context(img, frame):
     defects =[[start, end, mid, length] for start, end, mid, length in defects if length > 1000]
 
     # Print contours and holes in picture
-    for s, e, m, l in defects:
+    '''for s, e, m, l in defects:
         cv2.line(img, tuple(contour[s][0]), tuple(contour[e][0]), (120,0,120), 2)
-        cv2.circle(frame, (contour[m][0][0], contour[m][0][1] + 90), 5,[120,120,255],-1)
+        cv2.circle(frame, (contour[m][0][0], contour[m][0][1] + 90), 5,[120,120,255],-1)'''
 
     if len(defects) == 0:
         text = ["Recto"]
@@ -186,7 +186,7 @@ def get_scene_context(img, frame):
             direction2 = detect_curve(contour, defects, 1)
             text = ["Curva " + direction1, "Curva " + direction2]
         else:
-            text = ["Cruce 2 salidas"]
+            text = ["Cruce dos salidas"]
     elif len(defects) == 3:
         n_curves, n_in_a_cross, curves_indexes = detect_closeness(contour, defects)
         if n_curves == 3:
