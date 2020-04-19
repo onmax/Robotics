@@ -19,7 +19,6 @@ class PrepareTraining:
         if remove_frames:
             self.remove_files_in(self.remove_files_in)
         if video is not None:
-            print("video")
             self.set_frames_from_video(video)
         self.paint_frames()
 
@@ -143,9 +142,6 @@ class PrepareTraining:
         '''
 
         print("Select pixels you want to label. Use the three buttons of your mouse.\nControls:\n\t'z':to start again to paint all the pixels.\n\t'q':to finish and save the image.")
-
-        # Remove all the current images in the sections folder        
-        self.remove_files_in(self.sections_folder)
 
         # For each frame, we will show it wo the user
         originals_files = glob.glob("{}/*".format(self.originals_folder))

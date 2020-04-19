@@ -1,6 +1,8 @@
+import numpy as np
+
 class Boundaries:
-    def __init__(self):
-        self.set_boundaries()
+    def __init__(self, sections_img):
+        self.set_boundaries(sections_img)
     
     '''
     This function wil read how many changes are in a array
@@ -28,6 +30,6 @@ class Boundaries:
     def boundaries_str(self):
         boundaries = []
         for p in self.boundaries:
-            if paths[p] > 0:
-                boundaries.append("{}: {}".format(p, paths[p]))
+            if self.boundaries[p] > 0:
+                boundaries.append("{}: {}".format(p, self.boundaries[p]))
         return boundaries

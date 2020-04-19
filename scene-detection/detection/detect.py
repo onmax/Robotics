@@ -2,6 +2,8 @@ from joblib import load
 import cv2
 import time
 from functions import *
+from detection.boundaries import Boundaries
+from detection.scene_moments import SceneMoments
 
 class Detect:
     def __init__(self, video_name):
@@ -29,10 +31,14 @@ class Detect:
             ret, frame = cap.read()
             if ret:
                 sections_img, labels = self.clf.predict_image(frame)
-                print(labels)
+                boundaries = Boundaries(sections_img)
+                scene_context_line = SceneMoments(sections_img, [255, 0, 0])
+                scene_context_signs = SceneMoments(sections_img, [0, 0, 255])
+                print(boundaries.boundaries_str())
+                print(scene_context_line.defects)
+                print(scene_context_signs.defects)
                 cv2.imshow("Images", sections_img)
                 cv2.waitKey(0)
-                # boundaries = detect_boundaries(img_sections)
                 # texts, frame = get_scene_context(img_sections, frame)
                 # frame = cv2.resize(frame, (frame.shape[1] * 4, frame.shape[0] * 4))
                 # frame = write_text(frame, texts + boundaries)
