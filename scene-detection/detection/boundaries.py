@@ -27,9 +27,9 @@ class Boundaries:
     '''
     It will return a list of string for every boundary in the image that contains 1 or more paths
     '''
-    def boundaries_str(self):
+    def __str__(self):
         boundaries = []
         for p in self.boundaries:
             if self.boundaries[p] > 0:
                 boundaries.append("{}: {}".format(p, self.boundaries[p]))
-        return boundaries
+        return '  '.join(boundaries)
