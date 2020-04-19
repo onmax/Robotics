@@ -13,8 +13,6 @@ parser.add_argument("--frames_from_video", type=str,
                     help="Set the filename that the program will show in order to choose the frames the classifier will use as training")
 parser.add_argument("--remove_training_frames",
                     help="It will remove all the frames stored in ./images/train/originals.", action="store_true", default=False)
-parser.add_argument("--paint_frames",
-                    help="It will allow the user to paint all of the frames stored in the ./images/train/originals folder.", action="store_true", default=False)
 parser.add_argument("-t", "--train",
                     help="It will train the model using the images stored in the ./images/train/{originals, sections} folder.", action="store_true", default=False)
 parser.add_argument("-d", "--detect",
@@ -34,7 +32,7 @@ if len(sys.argv)==1:
 
 # Prepare training
 if args.prepare_training:
-    PrepareTraining(paint_frames=args.paint_frames, video=args.frames_from_video, remove_frames=args.remove_training_frames)
+    PrepareTraining(video=args.frames_from_video, remove_frames=args.remove_training_frames)
 
 
 # Train model

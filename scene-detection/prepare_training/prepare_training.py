@@ -7,21 +7,21 @@ import cv2
 import os
 import glob
 import pygame
-import numpy as numpy
+import numpy as np
 import imageio
 
 
 class PrepareTraining:
-    def __init__(self, paint_frames=False, video=None, remove_frames=False):
+    def __init__(self, video=None, remove_frames=False):
         self.originals_folder = "./images/train/originals"
         self.sections_folder = "./images/train/sections"
 
         if remove_frames:
             self.remove_files_in(self.remove_files_in)
         if video is not None:
+            print("video")
             self.set_frames_from_video(video)
-        if paint_frames:
-            self.paint_frames()
+        self.paint_frames()
 
     '''
     It will remove all the files in the folder
@@ -44,7 +44,7 @@ class PrepareTraining:
         print("Use dot and comma buttons to move the video +-1 frame")
         print("Press q to exit the program\n")
 
-        cap = cv2.VideoCapture("./videos/{}".format(video_name))
+        cap = cv2.VideoCapture("./videos/input/{}".format(video_name))
         fps = cap.get(cv2.CAP_PROP_FPS)
         current_frame = 0
 
