@@ -19,7 +19,12 @@ def open_images(images_paths):
     return data
 
 
-
+def predicted_in(start, n_frames):
+    end = time.time()
+    n_seconds = end - start
+    print("Predicted in {} seconds {} frames. That is {} seconds/frame".format(
+        n_seconds, n_frames, n_seconds / n_frames))
+        
 def get_sections_img(clf, frame):
     '''
     Returns and image of same size of frame where every pixel is classify

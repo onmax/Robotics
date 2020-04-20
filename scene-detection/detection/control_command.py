@@ -75,10 +75,12 @@ class Signs():
         return self.sign_str
 
 class ControlCommand():
-    def __init__(self, sections_img, boundaries, sm_line, sm_sign, frame_n):
+    def __init__(self, sections_img, boundaries, sm_line, sm_sign, frame_n, debug_mode=False):
+        self.debug_mode = debug_mode
+        self.frame_n = frame_n
+        
         self.path = self.detect_path(sections_img, boundaries, sm_line)
         self.signs = self.detect_signs(sections_img, sm_sign)
-        self.frame_n = frame_n
 
     def detect_path(self, sections_img, boundaries, sm_line):
         # step 1
@@ -107,7 +109,7 @@ class ControlCommand():
     def detect_arrow(self, sections_img, sm_sign):
         contour = sm_sign.contours[0]
         if len(contour) < 5:
-            return None
+            return Signs().nothing()
 
         ellipse = cv2.fitEllipse(contour)
         cE = (int(ellipse[0][0]), int(ellipse[0][1]) + 90)
@@ -117,8 +119,9 @@ class ControlCommand():
         cX = int(M["m10"] / (M["m00"] + 1e-5))
         cY = int(M["m01"] / (M["m00"] + 1e-5)) + 90
 
-        cv2.circle(sections_img, (cX, cY), 2, (255, 255, 255), -1) # white masses
-        cv2.circle(sections_img, cE, 2, (0, 0, 0), -1)
+        if self.debug_mode:
+            cv2.circle(sections_img, (cX, cY), 2, (255, 255, 255), -1) # white masses
+            cv2.circle(sections_img, cE, 2, (0, 0, 0), -1)
 
         return Signs().set_arrow(cE, (cX, cY), ellipsis_angle)
             

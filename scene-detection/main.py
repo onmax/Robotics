@@ -19,10 +19,15 @@ parser.add_argument("-d", "--detect",
                     help="It will detect the different components in the image from the video. If --input_video is not defined it will use video1.mp4", action="store_true", default=False)
 parser.add_argument("-i", "--input_video", type=str,
                     help="It will allow to the user to specify the video which it will be classify and detected. The video must be in the folder ./videos/input/")
-parser.add_argument("-s", "--save_detection", type=str, # TODO
-                    help="It will save the video with the output of the detection algorithm in ./videos/output/")
-parser.add_argument("-hp", "--hide_preview", # TODO
-                    help="It will hide the preview, so showing the preview in the window won't affect to the measurement of the time.")
+parser.add_argument("-s", "--save_detection", # TODO
+                    help="It will save the video with the output of the detection algorithm in ./videos/output/",
+                    action="store_true", default=False)
+parser.add_argument("-hp", "--hide_preview",
+                    help="It will hide the preview, so showing the preview in the window won't affect to the measurement of the time.",
+                    action="store_true", default=False)
+parser.add_argument("-dm", "--debug_mode",
+                    help="It will print stuff in the picture.",
+                    action="store_true", default=False)
 args = parser.parse_args()
 
 # If no arguments are given, show help message
@@ -45,4 +50,4 @@ if "--stats-model" in sys.argv:
 
 # Given a video it detects the diferent elements
 if args.detect:
-    Detect(video_name=args.input_video)
+    Detect(video_name=args.input_video, hide_preview=args.hide_preview, save_detection=args.save_detection, debug_mode=args.debug_mode)
