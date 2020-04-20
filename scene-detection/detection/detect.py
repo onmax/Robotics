@@ -4,6 +4,7 @@ import time
 from functions import *
 from detection.boundaries import Boundaries
 from detection.scene_moments import SceneMoments
+from detection.control_command import ControlCommand
 
 class Detect:
     def __init__(self, video_name):
@@ -31,15 +32,21 @@ class Detect:
             ret, frame = cap.read()
             if ret:
                 sections_img, labels = self.clf.predict_image(frame)
+                # median filter
+                sections_img = cv2.medianBlur(sections_img,3)
                 boundaries = Boundaries(sections_img)
-                scene_context_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
-                scene_context_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=400, type_object="sign")
-                text = [str(boundaries), ""] + scene_context_line.sstr() + scene_context_signs.sstr()
+                scene_moments_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
+                scene_moments_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=400, type_object="sign")
 
-                sections_img = scene_context_line.paint_lines(sections_img, [255, 255, 0])
-                sections_img = scene_context_line.paint_defects(sections_img, [255, 0, 255])
-                sections_img = scene_context_signs.paint_lines(sections_img, [0, 255, 255])
-                sections_img = scene_context_signs.paint_defects(sections_img, [0, 120, 255])
+                control_command = ControlCommand(sections_img, boundaries, scene_moments_line, scene_moments_signs)
+
+                text = [str(boundaries), ""] + scene_moments_line.sstr() + scene_moments_signs.sstr() + control_command.sstr()
+
+                sections_img = scene_moments_line.paint_lines(sections_img, [255, 255, 0])
+                sections_img = scene_moments_line.paint_defects(sections_img, [255, 0, 255])
+                sections_img = scene_moments_signs.paint_lines(sections_img, [0, 255, 255])
+                sections_img = scene_moments_signs.paint_defects(sections_img, [0, 120, 255])
+
 
                 sections_img = cv2.resize(sections_img, (sections_img.shape[1] * 4, sections_img.shape[0] * 4))
                 sections_img = write_text(sections_img, text)

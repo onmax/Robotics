@@ -13,7 +13,7 @@ class SceneMoments():
         sections_bw = bw * 255
         self.contours, self.defects = self.contours_n_defects(sections_bw)
 
-        sections_bw_compl = bw - 1
+        sections_bw_compl = 255 - sections_bw
         self.contours_compl, self.defects_compl = self.contours_n_defects(sections_bw_compl)
 
     
@@ -57,6 +57,5 @@ class SceneMoments():
             return img
         contour = self.contours[0]
         for s, e, m, l in self.defects:
-            print("lol", contour[s][0])
             cv2.line(img, (contour[s][0][0], contour[s][0][1] + 90), (contour[e][0][0], contour[e][0][1] + 90), color, 2)
         return img

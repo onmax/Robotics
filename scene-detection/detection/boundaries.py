@@ -21,7 +21,8 @@ class Boundaries:
         self.bottom = self.get_paths_boundaries(sections_img[-1,:])
         self.right = self.get_paths_boundaries(sections_img[:, -1])
         self.left = self.get_paths_boundaries(sections_img[:,0])
-
+        self.total = self.top + self.bottom + self.right + self.left
+    
     '''
     It will return a list of string for every boundary in the image that contains 1 or more paths
     '''
