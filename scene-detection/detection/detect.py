@@ -34,8 +34,8 @@ class Detect:
                 boundaries = Boundaries(sections_img)
                 scene_context_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
                 scene_context_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=400, type_object="sign")
-                text = [str(boundaries)] + [str(scene_context_line)] + [str(scene_context_signs)]
-                print(sections_img)
+                text = [str(boundaries), ""] + scene_context_line.sstr() + scene_context_signs.sstr()
+
                 sections_img = scene_context_line.paint_lines(sections_img, [255, 255, 0])
                 sections_img = scene_context_line.paint_defects(sections_img, [255, 0, 255])
                 sections_img = scene_context_signs.paint_lines(sections_img, [0, 255, 255])
@@ -43,15 +43,12 @@ class Detect:
 
                 sections_img = cv2.resize(sections_img, (sections_img.shape[1] * 4, sections_img.shape[0] * 4))
                 sections_img = write_text(sections_img, text)
-                # cv2.imshow("Images", sections_img)
-                # cv2.waitKey(0)
-                # texts, frame = get_scene_context(img_sections, frame)
-                # frame = cv2.resize(frame, (frame.shape[1] * 4, frame.shape[0] * 4))
-                # frame = write_text(frame, texts + boundaries)
+                cv2.imshow("Images", sections_img)
+                cv2.waitKey(0)
                 # n_frames += 1
 
             else:
-                capture.release()
+                cap.release()
                 break
         cv2.destroyAllWindows()
 

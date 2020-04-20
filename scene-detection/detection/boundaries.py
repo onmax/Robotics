@@ -17,19 +17,18 @@ class Boundaries:
     It will create a dictionary that will contain all of the boundaries for each side of the picture. It will load the top of the image, bottom of the image, the column of the left and the column of the right as a vector and count how paths are in those vectors using get_paths_boundaries
     '''
     def set_boundaries(self, sections_img):
-        self.boundaries = {
-            "top": self.get_paths_boundaries(sections_img[0,:]),
-            "bottom": self.get_paths_boundaries(sections_img[-1,:]),
-            "right": self.get_paths_boundaries(sections_img[:,-1]),
-            "left": self.get_paths_boundaries(sections_img[:,0])
-        }
+        self.top = self.get_paths_boundaries(sections_img[0,:])
+        self.bottom = self.get_paths_boundaries(sections_img[-1,:])
+        self.right = self.get_paths_boundaries(sections_img[:, -1])
+        self.left = self.get_paths_boundaries(sections_img[:,0])
 
     '''
     It will return a list of string for every boundary in the image that contains 1 or more paths
     '''
     def __str__(self):
         boundaries = []
-        for p in self.boundaries:
-            if self.boundaries[p] > 0:
-                boundaries.append("{}: {}".format(p, self.boundaries[p]))
+        ll = zip([self.top, self.bottom, self.right, self.left], ["top", "bottom", "right", "left"])
+        for v, s in ll:
+            if v > 0:
+                boundaries.append("{}: {}".format(s, v))
         return '  '.join(boundaries)
