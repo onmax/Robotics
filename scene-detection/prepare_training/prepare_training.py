@@ -17,7 +17,8 @@ class PrepareTraining:
         self.sections_folder = "./images/train/sections"
 
         if remove_frames:
-            self.remove_files_in(self.remove_files_in)
+            self.remove_files_in(self.originals_folder)
+            self.remove_files_in(self.sections_folder)
         if video is not None:
             self.set_frames_from_video(video)
         self.paint_frames()
@@ -32,7 +33,7 @@ class PrepareTraining:
             print("Removed {}".format(f.split('/')[-1]))
 
     '''
-    It will show to the user a video. This video won't be playing. The user can use left, right 
+    It will show to the user a video. This video won't be p5aying. The user can use left, right 
     arrows to move one second forward or backward or the comma or dot character to move one frame
     forward or backward. Pressing 'Enter' button will save the image in the
     ./images/train/originals/ folder
@@ -109,6 +110,8 @@ class PrepareTraining:
         while True:
             e = pygame.event.wait()
             if e.type == pygame.QUIT:
+                break
+            if e.type == pygame.KEYDOWN and e.unicode == 'q':
                 break
             if e.type == pygame.KEYDOWN and e.unicode == 'z':
                 return None, True
