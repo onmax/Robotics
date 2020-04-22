@@ -3,6 +3,9 @@ import imageio
 import cv2
 
 
+b, g, r = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+top_offset = 30
+
 def open_images(images_paths):
     '''
     Returns a list of tuples containing (original_image, image_labelled)
@@ -19,8 +22,7 @@ def open_images(images_paths):
     return data
 
 
-def predicted_in(start, n_frames):
-    end = time.time()
+def predicted_in(start, end, n_frames):
     n_seconds = end - start
     print("Predicted in {} seconds {} frames. That is {} seconds/frame".format(
         n_seconds, n_frames, n_seconds / n_frames))

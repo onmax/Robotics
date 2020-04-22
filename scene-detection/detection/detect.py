@@ -4,9 +4,8 @@ import time
 from functions import *
 from detection.boundaries import Boundaries
 from detection.scene_moments import SceneMoments
+from detection.scene_state import SceneState
 from detection.control_command import ControlCommand
-from detection.decision_making import DecisionMaking
-import time
 
 class Detect:
     def __init__(self, video_name, hide_preview, save_detection, debug_mode):
@@ -25,19 +24,16 @@ class Detect:
     
     def detect_video(self):
         start = time.time()
-        self.detect_video_loop()
+        n_frames = self.detect_video_loop()
         end = time.time()
-        n_seconds = end - start
-        print("Predicted in {} seconds TODO frames. That is TODO seconds/frame".format(n_seconds))
+        predicted_in(start, end, n_frames)
 
     def detect_video_loop(self):
         memory = []
 
-        start = time.time()
-
         n_frames = 0
         cap = cv2.VideoCapture(self.video_path)
-        cap.set(1, 2050) # 2550
+        cap.set(1, 620) # 2550
 
         if self.save_detection:
             video_name = self.video_path.split('/')[-1]
@@ -55,20 +51,19 @@ class Detect:
                 scene_moments_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
                 scene_moments_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=1000, type_object="sign")
 
+
+                scene_state = SceneState(sections_img, boundaries, scene_moments_line, scene_moments_signs, n_frames, self.debug_mode)
+                memory.append(scene_state)
+
+                decision = ControlCommand(memory).decision
                 if self.debug_mode:
+                    sections_img = scene_moments_line.paint_contours(sections_img, [255, 150, 36])
                     sections_img = scene_moments_line.paint_lines(sections_img, [255, 255, 0])
                     sections_img = scene_moments_line.paint_defects(sections_img, [255, 0, 255])
                     sections_img = scene_moments_signs.paint_lines(sections_img, [0, 255, 255])
                     sections_img = scene_moments_signs.paint_defects(sections_img, [0, 120, 255])
-
-                # TODO rename ControlCommand to SceneState
-                control_command = ControlCommand(sections_img, boundaries, scene_moments_line, scene_moments_signs, n_frames, self.debug_mode)
-                memory.append(control_command)
-
-                decision = DecisionMaking(memory).decision
-
-                if self.debug_mode:
-                    text = [str(boundaries), ""] + scene_moments_line.sstr() + scene_moments_signs.sstr() + control_command.sstr() + [decision]
+                    sections_img = boundaries.paint_boundaries_mid(sections_img)
+                    text = [str(boundaries), ""] + scene_moments_line.sstr() + scene_moments_signs.sstr() + scene_state.sstr() + [decision]
                 else:
                     text = [decision]
 
@@ -91,9 +86,7 @@ class Detect:
                 break
         if self.save_detection:
             out.release()
+
         cv2.destroyAllWindows()
 
-        if n_frames == 0:
-            print("No frames processed...")
-        else:
-            predicted_in(start, n_frames)
+        return n_frames
