@@ -2,10 +2,9 @@ from joblib import load
 import cv2
 import time
 from functions import *
-from detection.boundaries import Boundaries
-from detection.scene_moments import SceneMoments
-from detection.scene_state import SceneState
-from detection.control_command import ControlCommand
+from detection.scene_description import SceneDescription
+from detection.scene_state import SceneState 
+from detection.control_command import ControlCommand 
 
 class Detect:
     def __init__(self, video_name, hide_preview, save_detection, debug_mode):
@@ -33,7 +32,7 @@ class Detect:
 
         n_frames = 0
         cap = cv2.VideoCapture(self.video_path)
-        cap.set(1, 620) # 2550
+        cap.set(1, 500) #620 2550, 1500
 
         if self.save_detection:
             video_name = self.video_path.split('/')[-1]
@@ -45,33 +44,23 @@ class Detect:
             ret, frame = cap.read()
             if ret:
                 sections_img, labels = self.clf.predict_image(frame)
-                # median filter
-                sections_img = cv2.medianBlur(sections_img,5)
-                boundaries = Boundaries(sections_img)
-                scene_moments_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
-                scene_moments_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=1000, type_object="sign")
+                sections_img = cv2.medianBlur(sections_img, 3)
 
-
-                scene_state = SceneState(sections_img, boundaries, scene_moments_line, scene_moments_signs, n_frames, self.debug_mode)
+                scene_description = SceneDescription(sections_img, memory, w=60, h=60)
+                scene_state = SceneState(scene_description, n_frames, self.debug_mode)
                 memory.append(scene_state)
+                control = ControlCommand(memory)
 
-                decision = ControlCommand(memory).decision
+
                 if self.debug_mode:
-                    sections_img = scene_moments_line.paint_contours(sections_img, [255, 150, 36])
-                    sections_img = scene_moments_line.paint_lines(sections_img, [255, 255, 0])
-                    sections_img = scene_moments_line.paint_defects(sections_img, [255, 0, 255])
-                    sections_img = scene_moments_signs.paint_lines(sections_img, [0, 255, 255])
-                    sections_img = scene_moments_signs.paint_defects(sections_img, [0, 120, 255])
-                    sections_img = boundaries.paint_boundaries_mid(sections_img)
-                    text = [str(boundaries), ""] + scene_moments_line.sstr() + scene_moments_signs.sstr() + scene_state.sstr() + [decision]
+                    sections_img = scene_description.paint_verbose(sections_img)
+                    sections_img = control.paint_vector(sections_img)
+                    text = scene_description.sstr() + scene_state.sstr() + [str(control)]
                 else:
-                    text = [decision]
-
-
+                    text = [str(control)]
 
                 sections_img = cv2.resize(sections_img, (sections_img.shape[1] * 4, sections_img.shape[0] * 4))
                 sections_img = write_text(sections_img, text)
-                
                 if not self.hide_preview:
                     cv2.imshow("Images", sections_img)
                     cv2.waitKey(0)

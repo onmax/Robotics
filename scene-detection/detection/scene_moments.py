@@ -3,21 +3,26 @@ import numpy as np
 from functions import top_offset
 
 class SceneMoments():
-    def __init__(self, sections_img, color, min_contour_size=1000, type_object=""):
+    def __init__(self, sections_img, color, min_contour_size=1000, type_object="", offset=True, compl=False):
         self.min_contour_size = min_contour_size
 
         self.type_object = type_object
 
-        self.bw = np.all(sections_img == color, axis=-1).astype(np.uint8)[top_offset:,:]
+        self.bw = np.all(sections_img == color, axis=-1).astype(np.uint8)
+        if offset:
+            self.bw = self.bw[top_offset:,:]
+        cv2.waitKey(0)
 
         sections_bw = self.bw * 255
         self.contours = self.get_contours(sections_bw)
         self.contour, self.contour_index = self.get_contour()
         self.defects = self.get_defects()
 
-        sections_bw_compl = 255 - sections_bw
-        self.contours_compl = self.get_contours(sections_bw_compl)
-        self.defects_compl = self.get_defects()
+        self.compl = compl
+        if compl:
+            sections_bw_compl = 255 - sections_bw
+            self.contours_compl = self.get_contours(sections_bw_compl)
+            self.defects_compl = self.get_defects()
 
     
     def get_contours(self, img_bw):
@@ -43,26 +48,33 @@ class SceneMoments():
     Return the largest contour
     '''
     def get_contour(self):
-        if len(self.contours) == 0:
-            return [], -1
-        largest_area = 0
-        contour = self.contours[0]
-        i = 0
-        for _i, _contour in enumerate(self.contours):
-            area = cv2.contourArea(_contour) 
-            if area > largest_area:
-                largest_area = area
-                contour = _contour
-                i = _i
-        return contour, i
+        # if len(self.contours) == 0:
+        #     return [], -1
+        # largest_area = 0
+        # contour = self.contours[0]
+        # i = 0
+        # for _i, _contour in enumerate(self.contours):
+        #     area = cv2.contourArea(_contour) 
+        #     if area > largest_area:
+        #         largest_area = area
+        #         contour = _contour
+        #         i = _i
+        # print(len(self.contours), len(contour))
+        # return contour, i
+        return self.contours[0], 0
 
     '''
     Return a list of string containing useful data about the object: length of the contours and length of the defects for both, complement and normal
     '''
-    def sstr(self): 
-        lengths = "{} contours: {}  defects: {}".format(self.type_object, len(self.contours), len(self.defects))
-        lengths_compl = "Compl contours: {}  defects: {}".format(len(self.contours_compl), len(self.defects_compl))
-        return [lengths, lengths_compl, ""]
+    def sstr(self):
+
+        if not self.compl:
+            lengths = "{} contours: {}  defects: {}".format(self.type_object, len(self.contours), len(self.defects))
+            return [lengths, ""]
+        else:
+            lengths = "{} contours: {}  defects: {}".format(self.type_object, len(self.contours), len(self.defects))
+            lengths_compl = "Compl contours: {}  defects: {}".format(len(self.contours_compl), len(self.defects_compl))
+            return [lengths, lengths_compl, ""]
     
     def paint_defects(self, img, color):
         if len(self.contours) == 0:

@@ -6,14 +6,20 @@ class Boundary:
     def __init__(self, coords, x=None, y=None, current_lane=False):
         start, end, mid = coords
         if x == None:
-            self.start = (y, start)
-            self.end = (y, end)
-            self.mid =(y, mid)
+            self.start = np.array([y, start])
+            self.end = np.array([y, end])
+            self.mid =np.array([y, mid])
         elif y == None:
-            self.start = (start, x)
-            self.end = (end, x)
-            self.mid = (mid, x)
+            self.start = np.array([start, x])
+            self.end = np.array([end, x])
+            self.mid = np.array([mid, x])
         self.current_lane = current_lane
+    
+    def apply_offset(self, x, y):
+        offset = np.array([y, x])
+        self.start = self.start + offset
+        self.end = self.end + offset
+        self.mid = self.mid + offset
     
     def __str__(self):
         return "Start: {}, end: {}, mid: {}, current: {}".format(
@@ -78,29 +84,35 @@ class Boundaries:
     ]
     '''
     def remove_one_in_the_corners(self, top, bottom, right, left):
-        # top right corner
-        if len(top) > 0 and len(right) > 0 and top[-1].end == right[0].start:
-            top[-1].end = right[0].end
-            top[-1].mid = right[0].start
-            right = right[1:]
-        
-        # bottom right corner
-        if len(bottom) > 0 and len(right) > 0 and bottom[-1].end == right[-1].end:
-            bottom[-1].end = right[-1].start
-            bottom[-1].mid = right[-1].end
-            right = right[:-1]
+        def equal(p1, p2):
+            return p1[0] == p2[0] and p1[1] == p2[1]
+        if len(top) > 0:
+            if not (len(top) == 0 and len(right) > 0 and len(left) > 0 and equal(top[0].start, left[0].start) and equal(top[0].end, right[0].start)):
+                # top right corner
+                if len(right) > 0 and equal(top[-1].end, right[0].start):
+                    top[-1].end = right[0].end
+                    top[-1].mid = np.median(np.array([top[-1].start, top[-1].end]), axis=0).astype(np.uint8)
+                    right = right[1:]
+                
+                # top left corner
+                if len(left) > 0 and equal(top[0].start, left[0].start):
+                    top[0].start = left[0].end
+                    top[0].mid = np.median(np.array([top[0].start, top[0].end]), axis=0).astype(np.uint8)
+                    left = left[1:]
+        if len(top) > 0:
+            if not (len(bottom) == 0 and len(right) > 0 and len(left) > 0 and equal(bottom[0].start, left[0].start) and equal(bottom[0].end, right[0].start)):
+                # bottom right corner
+                if len(right) > 0 and equal(bottom[-1].end, right[-1].end):
+                    bottom[-1].end = right[-1].start
+                    bottom[-1].mid = np.median(np.array([bottom[-1].start, bottom[-1].end]), axis=0).astype(np.uint8)
+                    right = right[:-1]
 
-        # bottom left corner
-        if len(bottom) > 0 and len(left) > 0 and bottom[0].start == left[-1].end:
-            bottom[0].start = left[-1].start
-            bottom[0].mid = left[-1].end
-            left = left[:-1]
+                # bottom left corner
+                if len(left) > 0 and equal(bottom[0].start, left[-1].end):
+                    bottom[0].start = left[-1].start
+                    bottom[0].mid = np.median(np.array([bottom[0].start, bottom[0].end]), axis=0).astype(np.uint8)
+                    left = left[:-1]
 
-        # top left corner
-        if len(top) > 0 and len(left) > 0 and top[0].start == left[0].start:
-            top[0].start = left[0].end
-            top[0].mid = left[0].start
-            left = left[1:]
         
         return top, bottom, right, left
 
@@ -126,7 +138,15 @@ class Boundaries:
             if b.current_lane:
                 return b
         return None
+
+    def apply_offset(self, x, y):
+        for bs in [self.top, self.bottom, self.right, self.left]:
+            for b in bs:
+                b.apply_offset(x, y)
     
+    def get_boundaries_no_bottom(self):
+        return [self.right] + [self.top] + [self.left]
+
     '''
     It will return a list of string for every boundary in the image that contains 1 or more paths
     '''
@@ -142,8 +162,8 @@ class Boundaries:
         for boundaries in [self.top, self.bottom, self.right, self.left]:
             for boundary in boundaries:
                 if boundary.current_lane:
-                    cv2.circle(img, boundary.mid, 2, [0, 145, 255], -1)
+                    cv2.circle(img, tuple(boundary.mid), 2, [0, 145, 255], -1)
                 else:
-                    cv2.circle(img, boundary.mid, 2, [255, 0, 145], -1)
+                    cv2.circle(img, tuple(boundary.mid), 2, [255, 0, 145], -1)
         return img
-    
+

@@ -44,15 +44,17 @@ class Path():
         return self.path_str
 
 class Arrow():
-    def __init__(self, center_ellipsis, center_masses, angle):
+    def __init__(self, center_ellipsis, center_masses, angle_ellipsis):
         (EX, EY) = center_ellipsis
         (MX, MY) = center_masses
-
-        if angle > 180 - 45:
-            self.direction = "straight"
-        else:
-            self.direction = "left" if MX < EX else "right"
-        self.angle = angle
+        vector_dir = np.array([MX-EX , MY-EY])
+        norm_dir = np.linalg.norm(vector_dir)
+        vector_vertical = np.array([0,1])
+        norm_vertical = np.linalg.norm(vector_vertical)
+        self.angle = np.degrees(np.arccos((vector_dir @ vector_vertical) / (norm_dir * norm_vertical)))
+        self.angle = self.angle * -1 if angle_ellipsis > 90 else self.angle
+        self.center = center_ellipsis
+        self.direction = "left" if angle_ellipsis < 0 else "rigth"
 
 class Signs():
     def __init__(self):
@@ -75,15 +77,19 @@ class Signs():
         return self.sign_str
 
 class SceneState():
-    def __init__(self, sections_img, boundaries, sm_line, sm_sign, frame_n, debug_mode=False):
+    def __init__(self, scene_description, frame_n, debug_mode=False):
         self.debug_mode = debug_mode
         self.frame_n = frame_n
         
-        self.boundaries = boundaries
-        self.path = self.detect_path(sections_img, boundaries, sm_line)
-        self.signs = self.detect_signs(sections_img, sm_sign)
+        image = scene_description.image
+        boundaries = scene_description.boundaries
+        sm_line = scene_description.scene_moments_line
+        sm_sign = scene_description.scene_moments_signs
+        self.description = scene_description
+        self.path = self.detect_path(boundaries, sm_line)
+        self.signs = self.detect_signs(scene_description.image, sm_sign)
 
-    def detect_path(self, sections_img, boundaries, sm_line):
+    def detect_path(self, boundaries, sm_line):
         # step 1
         if len(sm_line.contours_compl) <= 1:
             return Path().nothing()
@@ -93,9 +99,9 @@ class SceneState():
             if len(sm_line.defects) == 0:
                 return Path().set_is_straight_line()
             else:
-                if boundaries.bottom == 1 and boundaries.left == 1:
+                if len(boundaries.bottom) == 1 and len(boundaries.left) == 1:
                     return Path().set_curve("Left")
-                elif boundaries.bottom == 1 and boundaries.right == 1:
+                elif len(boundaries.bottom) == 1 and len(boundaries.right) == 1:
                     return Path().set_curve("Right")
                 else:
                     return Path().set_is_straight_line()
@@ -107,7 +113,7 @@ class SceneState():
         
         return Path().nothing()
     
-    def detect_arrow(self, sections_img, sm_sign):
+    def detect_arrow(self, image, sm_sign):
         contour = sm_sign.get_contour()
         if len(contour) < 5:
             return Signs().nothing()
@@ -121,16 +127,15 @@ class SceneState():
         cY = int(M["m01"] / (M["m00"] + 1e-5)) + top_offset
 
         if self.debug_mode:
-            cv2.circle(sections_img, (cX, cY), 2, (255, 255, 255), -1) # white masses
-            cv2.circle(sections_img, cE, 2, (0, 0, 0), -1)
-
+            cv2.circle(image, (cX, cY), 2, (255, 255, 255), -1) # white masses
+            cv2.circle(image, cE, 2, (0, 0, 0), -1)
         return Signs().set_arrow(cE, (cX, cY), ellipsis_angle)
             
-    def detect_signs(self, sections_img, sm_sign):
+    def detect_signs(self, image, sm_sign):
         if len(sm_sign.contours) == 0:
             return Signs().nothing()
         if self.path.n_way_street != None:
-            return self.detect_arrow(sections_img, sm_sign)
+            return self.detect_arrow(image, sm_sign)
         else:
             # TODO Check sign
             return Signs().todo()

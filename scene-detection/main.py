@@ -1,7 +1,8 @@
 import sys
 from prepare_training.prepare_training import PrepareTraining
-from train.train import Train
+from segmentation.train import Train
 from detection.detect import Detect
+# from shape_detection.train.TrainShape import TrainShape
 
 import argparse
 import sys
@@ -13,7 +14,7 @@ parser.add_argument("--frames_from_video", type=str,
                     help="Set the filename that the program will show in order to choose the frames the classifier will use as training")
 parser.add_argument("--remove_training_frames",
                     help="It will remove all the frames stored in ./images/train/originals.", action="store_true", default=False)
-parser.add_argument("-t", "--train",
+parser.add_argument("-t", "--train_segmentation",
                     help="It will train the model using the images stored in the ./images/train/{originals, sections} folder.", action="store_true", default=False)
 parser.add_argument("-d", "--detect",
                     help="It will detect the different components in the image from the video. If --input_video is not defined it will use video1.mp4", action="store_true", default=False)
@@ -28,6 +29,9 @@ parser.add_argument("-hp", "--hide_preview",
 parser.add_argument("-dm", "--debug_mode",
                     help="It will print stuff in the picture.",
                     action="store_true", default=False)
+parser.add_argument("-ts", "--train_shape",
+                    help="It will train the shape classifier using K-foldr",
+                    action="store_true", default=False)
 args = parser.parse_args()
 
 # If no arguments are given, show help message
@@ -41,8 +45,13 @@ if args.prepare_training:
 
 
 # Train model
-if args.train:
+if args.train_segmentation:
     Train()
+
+# Train shape model
+if args.train_shape:
+    # TrainShape()
+    pass
 
 # Get the confusion matrix of the model
 if "--stats-model" in sys.argv:
