@@ -32,8 +32,8 @@ parser.add_argument("-dm", "--debug_mode",
 parser.add_argument("-sb", "--segmented_background",
                     help="It will show the video or preview with the segmented background (read, green and blue)",
                     action="store_true", default=False)
-parser.add_argument("-ts", "--train_shape",
-                    help="It will train the shape classifier using K-foldr",
+parser.add_argument("-k", "--kfold",
+                    help="It will train the shape classifier using K-foldr and print the predictions",
                     action="store_true", default=False)
 args = parser.parse_args()
 
@@ -53,8 +53,8 @@ if args.train_segmentation:
     Train()
 
 # Train shape model
-if args.train_shape:
-    TrainShape()
+if args.kfold:
+    TrainShape().k_fold()
 
 # Get the confusion matrix of the model
 # if "--stats-model" in sys.argv:

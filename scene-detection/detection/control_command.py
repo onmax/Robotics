@@ -22,8 +22,7 @@ class ControlCommand():
     '''
 
     def arrow_angle(self, state, memory):
-        angles = [s.signs.arrow.angle for s in memory[-101:-20]
-                  if s.signs.arrow != None]
+        angles = [s.signs.arrow.angle for s in memory[-101:-20] if s.signs != None and s.signs.arrow != None]
         if len(angles) != 0:
             return np.mean(np.array(angles))
         else:

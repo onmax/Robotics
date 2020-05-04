@@ -31,7 +31,7 @@ class Detect:
         predicted_in(start, end, n_frames)
 
     def detect_video_loop(self):
-        TrainShape().train()
+        model = TrainShape().train()
 
         memory = []
 
@@ -43,7 +43,7 @@ class Detect:
             video_name = self.video_path.split('/')[-1]
             filename = "./videos/output/" + video_name.split('.')[0] + ".avi"
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            out = cv2.VideoWriter(filename, fourcc, 30, (320 * 4, 240 * 4))
+            out = cv2.VideoWriter(filename, fourcc, 15, (320 * 4, 240 * 4))
 
         while cap.isOpened():
             ret, frame = cap.read()
@@ -53,7 +53,7 @@ class Detect:
                 scene_description = SceneDescription(
                     sections_img, memory, w=60, h=60)
                 scene_state = SceneState(
-                    scene_description, n_frames, self.debug_mode)
+                    scene_description, n_frames, model, self.debug_mode)
                 memory.append(scene_state)
                 memory = memory[-120:]
                 control = ControlCommand(memory)

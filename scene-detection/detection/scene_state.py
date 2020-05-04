@@ -13,8 +13,7 @@
 import cv2
 import numpy as np
 from functions import top_offset
-from shape_detection.train_shape import CLF
-
+from shape_detection.train_shape import KneighboursClassifier
 
 class Path():
     def set_params(self, is_straight_line=False, curve_direction=None, n_way_street=None):
@@ -69,19 +68,20 @@ class Signs():
         self.sign_str = "No signs"
         return self
 
-    def normal_sign(self, image):
-        prediction = CLF.predict(image)
+    def normal_sign(self, image, model):
+        prediction = model.predict(image)
         if len(prediction) == 0:
-            self.sign_str = "Unkonw sign"
+            self.sign_str = "Unknown sign"
         else:
             self.sign_str = prediction[0]
+        return self
 
     def __str__(self):
         return self.sign_str
 
 
 class SceneState():
-    def __init__(self, scene_description, frame_n, debug_mode=False):
+    def __init__(self, scene_description, frame_n, model, debug_mode=False):
         self.debug_mode = debug_mode
         self.frame_n = frame_n
 
@@ -91,7 +91,7 @@ class SceneState():
         sm_sign = scene_description.scene_moments_signs
         self.description = scene_description
         self.path = self.detect_path(boundaries, sm_line)
-        self.signs = self.detect_signs(scene_description.image, sm_sign)
+        self.signs = self.detect_signs(scene_description.image, sm_sign, model)
 
     def detect_path(self, boundaries, sm_line):
         # step 1
@@ -134,13 +134,13 @@ class SceneState():
             cv2.circle(image, cE, 2, (0, 0, 0), -1)
         return Signs().set_arrow(cE, (cX, cY), ellipsis_angle)
 
-    def detect_signs(self, image, sm_sign):
+    def detect_signs(self, image, sm_sign, model):
         if len(sm_sign.contours) == 0:
             return Signs().nothing()
         if self.path.n_way_street != None:
             return self.detect_arrow(image, sm_sign)
         else:
-            return Signs().normal_sign(image)
+            return Signs().normal_sign(image, model)
 
     def sstr(self):
         return [str(self.path), str(self.signs)]

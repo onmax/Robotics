@@ -5,8 +5,6 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
 
-CLF = None
-
 
 class TrainShape():
     def get_img_n_labels(self):
@@ -30,8 +28,7 @@ class TrainShape():
 
     def train(self):
         img_raw_list, labels = self.get_img_n_labels()
-        CLF = KneighboursClassifier().fit(img_raw_list, labels)
-
+        return KneighboursClassifier().fit(img_raw_list, labels)
 
 class KneighboursClassifier():
     def fit(self, img_raw_list, labels):
@@ -47,7 +44,10 @@ class KneighboursClassifier():
 
     def predict(self, img):
         X = self.contour2des(img, self.img2contour(img))
-        return self.neigh.predict(X)
+        if np.all(X == None):
+            return []
+        else:
+            return self.neigh.predict(X)
 
     def hamming_dist(self, d1, d2):
         d1, d2 = d1.astype(np.uint8), d2.astype(np.uint8)
@@ -64,8 +64,7 @@ class KneighboursClassifier():
         bw = np.logical_and(img[:, :, 0] >= 230, img[:, :, 1]
                             < 20, img[:, :, 2] < 20).astype(np.uint8) * 255
         cv2.waitKey(0)
-        contours, _ = cv2.findContours(
-            bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        contours, _ = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
         return contours[0] if len(contours) > 0 else None
 
