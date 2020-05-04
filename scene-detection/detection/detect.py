@@ -3,24 +3,27 @@ import cv2
 import time
 from functions import *
 from detection.scene_description import SceneDescription
-from detection.scene_state import SceneState 
-from detection.control_command import ControlCommand 
+from detection.scene_state import SceneState
+from detection.control_command import ControlCommand
+from shape_detection.train_shape import TrainShape
+
 
 class Detect:
-    def __init__(self, video_name, hide_preview, save_detection, debug_mode):
+    def __init__(self, video_name, hide_preview, save_detection, debug_mode, segmented_background):
         self.hide_preview = hide_preview
         self.save_detection = save_detection
         self.debug_mode = debug_mode
+        self.segmented_background = segmented_background
 
         video_name = "video1.mp4" if video_name == None else video_name
         self.video_path = "./videos/input/{}".format(video_name)
-        
+
         # Loads the classifier
         self.clf = load('./classifier-euclidian.joblib')
         print("Detecting using the video {}".format(self.video_path))
-        
+
         self.detect_video()
-    
+
     def detect_video(self):
         start = time.time()
         n_frames = self.detect_video_loop()
@@ -28,11 +31,13 @@ class Detect:
         predicted_in(start, end, n_frames)
 
     def detect_video_loop(self):
+        TrainShape().train()
+
         memory = []
 
         n_frames = 0
         cap = cv2.VideoCapture(self.video_path)
-        cap.set(1, 500) #620 2550, 1500
+        cap.set(1, 450)  # 1250 2550, 1500
 
         if self.save_detection:
             video_name = self.video_path.split('/')[-1]
@@ -45,28 +50,34 @@ class Detect:
             if ret:
                 sections_img, labels = self.clf.predict_image(frame)
                 sections_img = cv2.medianBlur(sections_img, 3)
-
-                scene_description = SceneDescription(sections_img, memory, w=60, h=60)
-                scene_state = SceneState(scene_description, n_frames, self.debug_mode)
+                scene_description = SceneDescription(
+                    sections_img, memory, w=60, h=60)
+                scene_state = SceneState(
+                    scene_description, n_frames, self.debug_mode)
                 memory.append(scene_state)
+                memory = memory[-120:]
                 control = ControlCommand(memory)
 
+                output_image = sections_img if self.segmented_background else frame
 
                 if self.debug_mode:
-                    sections_img = scene_description.paint_verbose(sections_img)
-                    sections_img = control.paint_vector(sections_img)
-                    text = scene_description.sstr() + scene_state.sstr() + [str(control)]
+                    output_image = scene_description.paint_verbose(
+                        output_image)
+                    output_image = control.paint_vector(output_image)
+                    text = scene_description.sstr() + scene_state.sstr() + control.sstr()
                 else:
-                    text = [str(control)]
+                    text = scene_state.sstr() + control.sstr()
+                    output_image = control.paint_vector(output_image)
 
-                sections_img = cv2.resize(sections_img, (sections_img.shape[1] * 4, sections_img.shape[0] * 4))
-                sections_img = write_text(sections_img, text)
+                output_image = cv2.resize(
+                    output_image, (output_image.shape[1] * 4, output_image.shape[0] * 4))
+                output_image = write_text(output_image, text)
                 if not self.hide_preview:
-                    cv2.imshow("Images", sections_img)
-                    cv2.waitKey(0)
-                
+                    cv2.imshow("Images", output_image)
+                    cv2.waitKey(1)
+
                 if self.save_detection:
-                    out.write(sections_img)
+                    out.write(output_image)
 
                 n_frames += 1
 
@@ -74,6 +85,7 @@ class Detect:
                 cap.release()
                 break
         if self.save_detection:
+            print("Video saved at", filename)
             out.release()
 
         cv2.destroyAllWindows()

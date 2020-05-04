@@ -48,20 +48,19 @@ class SceneMoments():
     Return the largest contour
     '''
     def get_contour(self):
-        # if len(self.contours) == 0:
-        #     return [], -1
-        # largest_area = 0
-        # contour = self.contours[0]
-        # i = 0
-        # for _i, _contour in enumerate(self.contours):
-        #     area = cv2.contourArea(_contour) 
-        #     if area > largest_area:
-        #         largest_area = area
-        #         contour = _contour
-        #         i = _i
-        # print(len(self.contours), len(contour))
-        # return contour, i
-        return self.contours[0], 0
+        if len(self.contours) == 0:
+            return [], -1
+        largest_area = 0
+        contour = self.contours[0]
+        i = 0
+        for _i, _contour in enumerate(self.contours):
+            area = cv2.contourArea(_contour) 
+            if area > largest_area:
+                largest_area = area
+                contour = _contour
+                i = _i
+        return contour, i
+        # return self.contours[0], 0
 
     '''
     Return a list of string containing useful data about the object: length of the contours and length of the defects for both, complement and normal
