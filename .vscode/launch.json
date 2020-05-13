@@ -9,8 +9,11 @@
 			"type": "python",
 			"request": "launch",
 			"program": "${file}",
+			// "program": "./scene-detection/main.py",
 			"console": "integratedTerminal",
-			"args": ["--predict"]
+			"args": [
+				"-d -i=video3.avi -dm"
+			]
 		}
 	]
 }

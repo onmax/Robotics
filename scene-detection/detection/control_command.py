@@ -1,85 +1,95 @@
-'''
-- Command control for the line.
-    1. if number of contours in complementary is 0 or 1 => Nothing
-    2. if number of contours in complementary is 2 => Straight line or curve
-        2.1 if number of defects is 0 => Straight line
-        2.2 else => curve
-            2.2.1 If the sum of boundaries is 2, and at least one of them is from the bottom and the other one is going to on of the sides. If the side is left => curve left, or if it is right => curve right
-            2.2.2 Fit a ellipsis in the contour and get the value of inclination. If angle is negative => curve left. If angle is positive => curve right
-    3. If number of contours in complementary is 3 => two-way street
-    4. If number of contours in complementary is 4 or more => three-way street. There is no four-way street or more.
-'''
-
-import cv2 
 import numpy as np
+import cv2
 
+# LAST_ARROW = None
 
-class Path():
-    path_str = ""
-
-    def set_params(self, is_straight_line=False, curve_direction=None, n_way_street=None):
-        self.is_straight_line = is_straight_line
-        self.curve_direction = curve_direction
-        self.n_way_street = n_way_street
-
-    def nothing(self):
-        self.path_str = "Nothing"
-        self.set_params()
-        return self
-    
-    def set_is_straight_line(self):
-        self.path_str = "Straight line"
-        self.set_params(is_straight_line=True)
-        return self
-
-    def set_curve(self, direction):
-        self.path_str = "{} curve".format(direction)
-        self.set_params(curve_direction=direction)
-        return self
-        
-    def set_n_way_cross(self, n_way_street):
-        self.path_str = "{}-way-street".format(n_way_street)
-        self.set_params(n_way_street=n_way_street)
-        return self
-    
-    def __str__(self):
-        return self.path_str
 
 class ControlCommand():
+    def __init__(self, memory):
+        # self.memory = memory
 
-    def __init__(self, sections_img, boundaries, sm_line, sm_sign):
-        self.path = self.detect_path(sections_img, boundaries, sm_line)
+        self.current_state = memory[-1]
+        # if self.current_state.signs.arrow != None:
+        #     LAST_ARROW = self.current_state.signs.arrow
 
-    def detect_path(self, sections_img, boundaries, sm_line):
-        # step 1
-        if len(sm_line.contours_compl) <= 1:
-            return Path().nothing()
-        
-        # step 2
-        if len(sm_line.contours_compl) == 2:
-            if len(sm_line.defects) == 0:
-                return Path().set_is_straight_line()
-            else:
-                if boundaries.bottom == 1 and boundaries.left == 1:
-                    return Path().set_curve("Left")
-                elif boundaries.bottom == 1 and boundaries.right == 1:
-                    return Path().set_curve("Right")
-                else:
-                    return Path().set_is_straight_line()
+        self.angle = self.get_angle(self.current_state, memory)
+        self.angle = 0 if self.angle == None else self.angle
+        self.vx = np.sin(self.angle * np.pi / 180)
+        self.vy = np.cos(self.angle * np.pi / 180)
 
-    
-        # step 3 and 4
-        if len(sm_line.contours_compl) > 2:
-            return Path().set_n_way_cross(min(len(sm_line.contours_compl), 4))
-        
-        return Path().nothing()
-    
+    '''
+    It returns the angle of the most recent arrow detected in the last 100 frames. If no arrow is detected, an angle of 0 will be returned
+    '''
+
+    def arrow_angle(self, state, memory):
+        angles = [s.signs.arrow.angle for s in memory[-101:-20] if s.signs != None and s.signs.arrow != None]
+        if len(angles) != 0:
+            return np.mean(np.array(angles))
+        else:
+            return 0
+
+    def get_angle_between_2_boundaries(self, entrance_boundary, destination_boundary):
+        x1, y1 = entrance_boundary.mid[0], entrance_boundary.mid[1]
+        x2, y2 = destination_boundary.mid[0], destination_boundary.mid[1]
+
+        vector_dir = np.array([x1-x2, y1-y2])
+        norm_dir = np.linalg.norm(vector_dir)
+        vector_vertical = np.array([0, 1])
+        norm_vertical = np.linalg.norm(vector_vertical)
+
+        angle = np.degrees(
+            np.arccos((np.dot(vector_dir, vector_vertical)) / (norm_dir * norm_vertical)))
+        angle = angle * -1 if x2 < x1 else angle
+
+        return angle
+
+    def get_closest_boundary_to_angle(self, active, small_boundaries, angle):
+        candidates = small_boundaries.get_boundaries_no_bottom()
+        if active == None:
+            return None
+        angles_right = [self.get_angle_between_2_boundaries(
+            active, b) for b in small_boundaries.right]
+        angles_left = [self.get_angle_between_2_boundaries(
+            active, b) for b in small_boundaries.left]
+        angles_top = [self.get_angle_between_2_boundaries(
+            active, b) for b in small_boundaries.top]
+
+        if len(angles_right + angles_top + angles_left) == 0:
+            return 0
+
+        min_angle = 90
+        for _angle in angles_right + angles_top + angles_left:
+            if abs(angle - abs(_angle)) < abs(min_angle):
+                min_angle = _angle
+        return min_angle
+
+    '''
+    It will set the destination points. For that it will use the boundaries of the small square. If the small square contains 2 boundaries, then the boundary that is not in the bottom will be the destination (we assume that always there is one boundary at the bottom)
+    '''
+
+    def get_angle(self, state, memory):
+        small_boundaries = state.description.small_boundaries
+        if state.path.n_way_street != None and small_boundaries.total > 2:
+            # It is a n-street
+            angle_o = self.arrow_angle(state, memory)
+        # elif small_boundaries.total == 2:
+        else:
+            # straight or curve
+            angle_o = 0
+        angle = self.get_closest_boundary_to_angle(
+            state.description.boundaries.get_active_lane(), small_boundaries, angle_o)
+        return angle
+
+    def paint_vector(self, image):
+        b = self.current_state.description.boundaries.get_active_lane()
+        if b == None:
+            return image
+        x1, y1 = b.mid[0], b.mid[1]
+
+        x2 = int(x1 - 60 * -np.sin(self.angle * np.pi / 180))
+        y2 = int(y1 + 60 * -np.cos(self.angle * np.pi / 180))
+        image = cv2.line(image, (x1, y1), (x2, y2), (120, 0, 120), 2)
+        return image
+
     def sstr(self):
-        return [str(self.path)]
-
-
-
-
-
-
-
+        return ["VX: {}".format(self.vx), "VY: {}".format(self.vy)]
