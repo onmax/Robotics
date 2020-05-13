@@ -32,8 +32,7 @@ class Detect:
             ret, frame = cap.read()
             if ret:
                 sections_img, labels = self.clf.predict_image(frame)
-                # median filter
-                sections_img = cv2.medianBlur(sections_img,3)
+                sections_img = cv2.medianBlur(sections_img,5)
                 boundaries = Boundaries(sections_img)
                 scene_moments_line = SceneMoments(sections_img, [255, 0, 0], type_object="line")
                 scene_moments_signs = SceneMoments(sections_img, [0, 0, 255], min_contour_size=400, type_object="sign")
