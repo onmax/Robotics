@@ -4,7 +4,7 @@ import glob
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
-
+import time
 
 class TrainShape():
     def get_img_n_labels(self):
@@ -21,11 +21,13 @@ class TrainShape():
         for train_index, test_index in loo.split(X):
             X_train, X_test = X[train_index], X[test_index][0]
             y_train, y_test = y[train_index], y[test_index][0]
+            start = time.time()
             clf = KneighboursClassifier().fit(X_train, y_train)
             predictions.append(clf.predict(X_test) == y_test)
             print(clf.predict(X_test), y_test)
+            end = time.time()
+            print("average time", (end - start) / len(y)**2)
         print(np.unique(predictions, return_counts=True))
-
     def train(self):
         img_raw_list, labels = self.get_img_n_labels()
         return KneighboursClassifier().fit(img_raw_list, labels)
@@ -49,6 +51,7 @@ class KneighboursClassifier():
         else:
             return self.neigh.predict(X)
 
+    # Función usada para calcular la distancia entre dos vectores
     def hamming_dist(self, d1, d2):
         d1, d2 = d1.astype(np.uint8), d2.astype(np.uint8)
         assert d1.dtype == np.uint8 and d2.dtype == np.uint8
@@ -56,18 +59,15 @@ class KneighboursClassifier():
         d2_bits = np.unpackbits(d2)
         return np.bitwise_xor(d1_bits, d2_bits).sum()
 
+    # Convertimos la imagen a contorno
     def img2contour(self, img):
         img = img[:, :, :3]
-        # bw = np.ones(img.shape[:2])
-        # bw[np.where(np.all(img[:, :, 0] >= 230, img[:, :, 1]
-        #    < 20, img[:, :, 2] < 20))] = 0
         bw = np.logical_and(img[:, :, 0] >= 230, img[:, :, 1]
                             < 20, img[:, :, 2] < 20).astype(np.uint8) * 255
-        cv2.waitKey(0)
         contours, _ = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-
         return contours[0] if len(contours) > 0 else None
 
+    # Convertimos el contorno a un descriptor ORB
     def contour2des(self, img, contour):
         (x, y), axis, angle = cv2.fitEllipse(contour)
         axis = np.array(axis)

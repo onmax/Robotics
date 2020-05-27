@@ -88,9 +88,7 @@ class KneighboursClassifier():
         X = []
         for img_raw in img_raw_list:
             X.append(self.contour2des(img_raw, self.img2contour(img_raw)))
-        print(X)
-        X = np.array(X)
-        print(X.shape)
+        X = np.array(X).reshape((-1, 32)).astype(np.uint8)
         self.neigh = KNeighborsClassifier(
             n_neighbors=5, metric=self.hamming_dist)
         # X son los datos de entrenamiento y son los datos objetivo
@@ -116,12 +114,20 @@ class KneighboursClassifier():
         # bw = np.ones(img.shape[:2])
         # bw[np.where(np.all(img[:, :, 0] >= 230, img[:, :, 1]
         #    < 20, img[:, :, 2] < 20))] = 0
-        bw = np.logical_and(img[:, :, 0] >= 230, img[:, :, 1]
-                            < 20, img[:, :, 2] < 20).astype(np.uint8) * 255
-        # cv2.waitKey(0)
-        contours  = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[-2]
+        bw = np.logical_and(img[:, :, 0] < 20, img[:, :, 1]
+                            < 20, img[:, :, 2] >= 230).astype(np.uint8) * 255
+        _,contours,_  = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        plottedContour = cv2.drawContours(bw,contours,-1,(0,255,0),2)
+        cv2.imshow('CONTOUR',plottedContour)
+        cv2.waitKey(0)
+        contour = None
+        if len(contours) != 0:
+            for i in range(len(contours)):
+                if len(contours[i]) >= 5:
+                    contour = contours[i]
+                    break
 
-        return contours[0] if len(contours) > 0 else None
+        return contour
 
     def contour2des(self, img, contour):
         (x, y), axis, angle = cv2.fitEllipse(contour)
@@ -131,7 +137,7 @@ class KneighboursClassifier():
         orb = cv2.ORB_create()
         kp = cv2.KeyPoint(x, y, np.mean(axis) * 1.3, angle - 90)
         lkp, des = orb.compute(img, [kp])
-        return des[0] if type(des) is np.ndarray else des
+        return des
 
 
 class ControlCommand():
@@ -655,6 +661,132 @@ class SceneMoments():
         cv2.drawContours(img, contour, -1, color, 2)
         return img
 
+class Train:
+    '''
+    The purpose of this class is to train the model of the classifier. At the end of the constructor it will save the model in a file, so it won't be necessary to be creating the model every time.
+    '''
+
+    def __init__(self):
+        self.originals_folder = "./images/train/originals"
+        self.sections_folder = "./images/train/sections"
+
+        data = self.get_training_data()
+        self.train_model(data)
+
+    def get_training_data(self):
+        '''
+        It will load all the normalized pixels and its labels that are available at ./images/train
+        '''
+        originals_files = glob.glob("{}/*".format(self.originals_folder))
+        sections_files = glob.glob("{}/*".format(self.sections_folder))
+        if len(originals_files) != len(sections_files):
+            print("Check that the sections images and the originals images are the same")
+        return open_images(list(zip(originals_files, sections_files)))
+
+    def train_model(self, data):
+        '''
+        It will train the model and measure the time. The model will be saved.
+        '''
+        start = time.time()
+        clf = EuclidianClassifier()
+        clf.fit(data)
+        dump(clf, './classifier-euclidian.joblib')
+        end = time.time()
+        print("Trained euclidian classifier in {} seconds".format(end - start))
+
+class EuclidianClassifier():
+    colors = {
+            'b': [0, 255, 0],
+            'l': [0, 0, 255],
+            's': [255, 0, 0],
+        }
+
+    def __init__(self):
+        self.centroids = np.array([])
+        self.labels_centroids = np.array([])
+
+    def normalize_img(self, img):
+        return np.rollaxis((np.rollaxis(img, 2) + 0.0) / np.sum(img, 2), 0, 3)[:, :, :2]
+
+    def get_pixels(self, data):
+        '''
+        Returns the normalized RGB values and its label as an array of tuples representing the images
+        '''
+        signs = []
+        bck = []
+        line = []
+
+        for (original, labels) in data:
+            normalized = self.normalize_img(original)
+            signs = signs + [v for v in normalized[np.all(labels == [255, 0, 0], 2)]]
+            bck = bck + [v for v in normalized[np.all(labels == [0, 255, 0], 2)]]
+            line = line + [v for v in normalized[np.all(labels == [0, 0, 255], 2)]]
+        normalized = signs + bck + line
+        labels = ['s'] * len(signs) + ['b'] * len(bck) + ['l'] * len(line)
+
+        return np.array(normalized), np.array(labels)
+    
+    def fit(self, data):
+        '''
+        It will train the model given a list of tuples. Each tuple in the list represent an image where the first value is the original frame and the second contains the labels
+        '''
+        X, labels = self.get_pixels(data)
+        print("Training with...", 
+            np.unique(labels, return_counts=True), "b: background, l: line, s:sign")
+
+        self.labels_centroids = np.unique(labels)
+        self.centroids = np.array([np.mean(X[labels == l], axis=0) for l in self.labels_centroids])
+        # self.clf = SVC()
+        # self.clf.fit(X, labels)
+
+    def classes2sections(self, shape, classes):
+        '''
+        Converts the given matrix of labels to a image with the a color, for each pixel representing the class of the pixel (background=green, line=blue , or red=sign)
+        '''
+
+        labels = np.empty(classes.shape, dtype='<U1')
+        labels[classes == 0] = self.labels_centroids[0]
+        labels[classes == 1] = self.labels_centroids[1]
+        labels[classes == 2] = self.labels_centroids[2]
+        
+        classes = classes.reshape(shape[:2])
+        sections = np.empty(shape, dtype=np.uint8)
+        sections[classes == 0] = self.colors[self.labels_centroids[0]]
+        sections[classes == 1] = self.colors[self.labels_centroids[1]]
+        sections[classes == 2] = self.colors[self.labels_centroids[2]]
+
+        return sections, labels
+
+    def labels2img(self, frame, labels):
+        labels = labels.reshape(frame.shape[:2])
+        img_out = np.empty(frame.shape, dtype=np.uint8)
+        img_out[labels == 'b'] = [0, 255, 0]
+        img_out[labels == 'l'] = [0, 0, 255]
+        img_out[labels == 's'] = [255, 0, 0]
+        return img_out
+
+    def predict(self, X):
+        '''
+        Given an array of normalized pixels, it will return an array with the class of each pixel (a class can be 'b', 'l' or 's')
+        '''
+        predictions = np.linalg.norm(self.centroids[:, np.newaxis] - X, axis=2)
+        classes = np.argmin(predictions, axis=0)
+        return classes
+        # return self.clf.predict(X)
+    
+    def predict_image(self, img):
+        '''
+        Given an image, it will return a matrix with the same shape but each pixel will have the correct color RGB
+        '''
+        X = self.normalize_img(img).reshape((-1, 2))
+        classes = self.predict(X)
+        sections, labels = self.classes2sections(img.shape, classes)
+        # sections = self.labels2img(img, classes)
+        return sections, classes
+    
+    def save_model():
+        dump(self, './classifier.joblib')
+
 class SceneDescription():
     def __init__(self, image, memory, w=60, h=60):
         self.image = image
@@ -733,7 +865,6 @@ class BrainFinalExam(Brain):
   N_FRAMES = 0
 
   MEMORY = []
-
   def setup(self):
     self.bridge = CvBridge()
     self.image_sub = rospy.Subscriber("/image", Image, self.callback)
@@ -746,11 +877,11 @@ class BrainFinalExam(Brain):
     cv2.destroyAllWindows()
 
   def step(self):
-
+	
     # access last image received from the camera and convert it into
     # opencv format
     try:
-      self.cv_image = self.bridge.imgmsg_to_cv2(self.rosImage, "bgr8")
+      self.cv_image = self.bridge.imgmsg_to_cv2(self.rosImage, "rgb8")
       # self.cv_image = self.bridge.imgmsg_to_cv2(self.rosImage, "rgb8")
     except CvBridgeError as e:
       print(e)
@@ -760,7 +891,7 @@ class BrainFinalExam(Brain):
     cv2.waitKey(1)
     # write the image to a file, for debugging etc.
     # cv2.imwrite("test-file.jpg",self.cv_image)
-
+    
     # TODO maybe not use clf as we already have colors classified???
     sections_img, labels = self.clf.predict_image(self.cv_image)
     sections_img = cv2.medianBlur(sections_img, 3)
