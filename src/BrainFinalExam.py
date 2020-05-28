@@ -177,15 +177,15 @@ class ControlCommand():
 
         self.final_angle = self.mean_angle([self.angle, self.mid_angle])
         self.vx = np.sin(np.radians(self.final_angle))  # giro
-        self.vy = np.cos(np.radians(self.final_angle)) * 0.7  # forward
         self.vx = self.vx * (-1)
+        self.vy = max(0, 1 - abs(self.vx * 1.7))
 
-        if np.abs(self.final_angle) > 12 and np.abs(self.final_angle) < 20:
+        '''if np.abs(self.final_angle) > 12 and np.abs(self.final_angle) < 20:
             self.vy *= 0.7
             self.vx *= 1.8
         elif np.abs(self.final_angle) >= 20:
             self.vy *= 0.8
-            self.vx *= 2
+            self.vx *= 2'''
 
         print("Angulo", self.final_angle)
         print("Velocidades", self.vx, self.vy)
@@ -205,7 +205,7 @@ class ControlCommand():
     '''
 
     def arrow_angle(self, state, memory):
-        angles = [s.signs.arrow.angle for s in memory[-13:-4]
+        angles = [s.signs.arrow.angle for s in memory[-12:-7]
                   if s.signs != None and s.signs.arrow != None]
         if len(angles) != 0:
             return self.mean_angle(angles)
@@ -217,6 +217,8 @@ class ControlCommand():
             return 0
 
     def get_angle_between_2_boundaries(self, entrance_boundary, destination_boundary):
+        if destination_boundary is None or entrance_boundary is None:
+            return 0
         x1, y1 = entrance_boundary.mid[0], entrance_boundary.mid[1]
         x2, y2 = destination_boundary.mid[0], destination_boundary.mid[1]
         vector_dir = np.array([x1-x2, y1-y2])
@@ -242,7 +244,7 @@ class ControlCommand():
             active, b) for b in small_boundaries.top]
 
         if len(angles_right + angles_top + angles_left) == 0:
-            return 0
+            return 0,None
         T, __i = "", -1
         min_angle = 900
         current = None
@@ -578,7 +580,14 @@ class Arrow():
 
         (EX, EY) = center_ellipsis
         (MX, MY) = center_masses
-        self.angle = angle_ellipsis * -1 if EX > MX else angle_ellipsis
+        vector = np.array([MX - EX, MY - EY])
+        self.angle = np.rad2deg(np.arccos(np.dot(vector,np.array([0,1]))/np.linalg.norm(vector)))
+        if vector[0] < 0 : #y en sentido de las agujas respecto de vector
+            self.angle = self.angle - 180
+        else:
+            self.angle = 180 - self.angle
+            
+        #self.angle = angle_ellipsis * -1 if EX > MX else angle_ellipsis
         print((center_ellipsis, center_masses))
         # self.angle = angle_between(center_ellipsis, center_masses)
         print("ANGULO FLECHA", self.angle, angle_ellipsis)
@@ -683,13 +692,13 @@ class SceneState():
 
 
 class SceneMoments():
-    def __init__(self, sections_img, color, min_contour_size=1000, type_object="", offset=True, compl=False):
+    def __init__(self, sections_img, color, min_contour_size=1000, type_object="", offset=True, compl=False, inferior=-1):
         self.min_contour_size = min_contour_size
         self.type_object = type_object
-
+        
         self.bw = np.all(sections_img == color, axis=-1).astype(np.uint8)
         if offset:
-            self.bw = self.bw[top_offset:, :]
+            self.bw = self.bw[top_offset:inferior, :]
 
         sections_bw = self.bw * 255
         self.contours = self.get_contours(sections_bw)
@@ -928,7 +937,7 @@ class SceneDescription():
         self.scene_moments_line = SceneMoments(
             self.image, [255, 0, 0], type_object="line", compl=True)
         self.scene_moments_signs = SceneMoments(
-            image, [0, 0, 255], min_contour_size=1000, type_object="sign")
+            image, [0, 0, 255], min_contour_size=1000, type_object="sign", inferior=-20)
         self.set_active_lane(memory)
 
         self.bottom_center = image.shape[0] - 1, int(image.shape[1] / 2)
