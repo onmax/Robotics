@@ -586,7 +586,6 @@ class SceneState():
 class SceneMoments():
     def __init__(self, sections_img, color, min_contour_size=1000, type_object="", offset=True, compl=False):
         self.min_contour_size = min_contour_size
-
         self.type_object = type_object
 
         self.bw = np.all(sections_img == color, axis=-1).astype(np.uint8)
@@ -825,12 +824,17 @@ class EuclidianClassifier():
 
 class SceneDescription():
     def __init__(self, image, memory, w=60, h=60):
+        print("828")
         self.image = image
+        print("829")
         self.boundaries = Boundaries(self.image)
+        print("832")
         self.scene_moments_line = SceneMoments(
             self.image, [255, 0, 0], type_object="line", compl=True)
+        print("833")
         self.scene_moments_signs = SceneMoments(
             image, [0, 0, 255], min_contour_size=1000, type_object="sign")
+        print("836")
         self.set_active_lane(memory)
 
         self.small_image = self.get_small_image(w, h)
@@ -908,6 +912,8 @@ class BrainFinalExam(Brain):
     MEMORY = []
     debug_mode = True
 
+    debug_mode = True
+
     def setup(self):
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/image", Image, self.callback)
@@ -935,17 +941,22 @@ class BrainFinalExam(Brain):
         # cv2.imwrite("test-file.jpg",self.cv_image)
 
         # TODO maybe not use clf as we already have colors classified???
+        print("L939")
         self.clf = load('./classifier-euclidian.joblib')
+        print("L940")
         sections_img, labels = self.clf.predict_image(self.cv_image)
         sections_img = cv2.medianBlur(sections_img, 3)
+        print("L942")
         scene_description = SceneDescription(
             sections_img, self.MEMORY, w=60, h=60)
+        print("L943")
         scene_state = SceneState(
             scene_description, self.N_FRAMES, self.shape_model, self.debug_mode)
         self.MEMORY.append(scene_state)
         self.MEMORY = self.MEMORY[-120:]
         control = ControlCommand(self.MEMORY)
 
+        print(control.vx, control.vy)
         # Here you should process the image from the camera and calculate
         # your control variable(s), for now we will just give the controller
         # some 'fixed' values so that it will do something.
