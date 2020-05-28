@@ -910,6 +910,8 @@ class BrainFinalExam(Brain):
 
     MEMORY = []
 
+    debug_mode = True
+
     def setup(self):
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/image", Image, self.callback)
@@ -952,9 +954,9 @@ class BrainFinalExam(Brain):
             scene_description, self.N_FRAMES, self.shape_model, self.debug_mode)
         self.MEMORY.append(scene_state)
         print("L947")
-        memory = memory[-120:]
+        self.MEMORY = self.MEMORY[-120:]
         print("L949")
-        control = ControlCommand(memory)
+        control = ControlCommand(self.MEMORY)
 
         print(control.vx, control.vy)
         # Here you should process the image from the camera and calculate
