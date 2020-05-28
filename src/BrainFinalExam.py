@@ -1,6 +1,7 @@
 from pyrobot.brain import Brain
 
 import math
+import time
 import rospy
 import cv2
 from sensor_msgs.msg import Image
@@ -186,9 +187,8 @@ class ControlCommand():
             self.vy *= 0.8
             self.vx *= 2
 
-        print(self.angle)
-        print(self.vx, self.vy)
-
+        print("Angulo", self.final_angle)
+        print("Velocidades", self.vx, self.vy)
     '''
     It returns the vector between the center of the bottom of the image to the targeted boundary of the small square
     '''
@@ -197,8 +197,6 @@ class ControlCommand():
         small_boundaries = self.current_state.description.small_boundaries
         _, target = self.get_closest_boundary_to_angle(
             self.current_state.description.boundaries.get_active_lane(), small_boundaries)
-        print("Mid angle, here we go")
-        print(self.mid_center)
         self.mid_angle = self.get_angle_between_2_boundaries(
             self.mid_center, target)
 
@@ -207,11 +205,15 @@ class ControlCommand():
     '''
 
     def arrow_angle(self, state, memory):
-        angles = [s.signs.arrow.angle for s in memory[-101:]
+        angles = [s.signs.arrow.angle for s in memory[-13:-4]
                   if s.signs != None and s.signs.arrow != None]
         if len(angles) != 0:
-            return np.mean(np.array(angles))
+            return self.mean_angle(angles)
         else:
+            angles = [s.signs.arrow.angle for s in memory[-4:]
+                      if s.signs != None and s.signs.arrow != None]
+            if len(angles) != 0:
+                return self.mean_angle(angles)
             return 0
 
     def get_angle_between_2_boundaries(self, entrance_boundary, destination_boundary):
@@ -241,21 +243,24 @@ class ControlCommand():
 
         if len(angles_right + angles_top + angles_left) == 0:
             return 0
-
-        min_angle = 90
+        T, __i = "", -1
+        min_angle = 900
+        current = None
         for i, _angle in enumerate(angles_right):
-            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
+            if current is None or abs(self.angle_o - _angle) < current:
+                current = abs(self.angle_o - _angle)
                 min_angle = _angle
                 boundary = small_boundaries.right[i]
         for i, _angle in enumerate(angles_top):
-            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
+            if current is None or abs(self.angle_o - _angle) < current:
+                current = abs(self.angle_o - _angle)
                 min_angle = _angle
                 boundary = small_boundaries.top[i]
         for i, _angle in enumerate(angles_left):
-            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
+            if current is None or abs(self.angle_o - _angle) < current:
+                current = abs(self.angle_o - _angle)
                 min_angle = _angle
                 boundary = small_boundaries.left[i]
-
         return min_angle, boundary
 
     def mean_angle(self, deg):
@@ -566,10 +571,17 @@ class Path():
 
 class Arrow():
     def __init__(self, center_ellipsis, center_masses, angle_ellipsis):
+        def angle_between(p1, p2):
+            ang1 = np.arctan2(*p1[::-1])
+            ang2 = np.arctan2(*p2[::-1])
+            return np.rad2deg((ang1 - ang2) % (2 * np.pi))
+
         (EX, EY) = center_ellipsis
         (MX, MY) = center_masses
-        self.angle = -(angle_ellipsis - 90) if EX > MX else angle_ellipsis
-
+        self.angle = angle_ellipsis * -1 if EX > MX else angle_ellipsis
+        print((center_ellipsis, center_masses))
+        # self.angle = angle_between(center_ellipsis, center_masses)
+        print("ANGULO FLECHA", self.angle, angle_ellipsis)
         self.direction = "left" if self.angle < 0 else "right"
 
 
@@ -641,17 +653,14 @@ class SceneState():
             return Signs().nothing()
 
         ellipse = cv2.fitEllipse(contour)
-        cE = (int(ellipse[0][0]), int(ellipse[0][1]) + top_offset)
+        self.cE = (int(ellipse[0][0]), int(ellipse[0][1]) + top_offset)
         ellipsis_angle = ellipse[2]
 
         M = cv2.moments(contour)
-        cX = int(M["m10"] / (M["m00"] + 1e-5))
-        cY = int(M["m01"] / (M["m00"] + 1e-5)) + top_offset
+        self.cX = int(M["m10"] / (M["m00"] + 1e-5))
+        self.cY = int(M["m01"] / (M["m00"] + 1e-5)) + top_offset
 
-        if self.debug_mode:
-            cv2.circle(image, (cX, cY), 2, (255, 255, 255), -1)  # white masses
-            cv2.circle(image, cE, 2, (0, 0, 0), -1)
-        return Signs().set_arrow(cE, (cX, cY), ellipsis_angle)
+        return Signs().set_arrow(self.cE, (self.cX, self.cY), ellipsis_angle)
 
     def detect_signs(self, image, sm_sign, model):
         if len(sm_sign.contours) == 0:
@@ -660,6 +669,14 @@ class SceneState():
             return self.detect_arrow(image, sm_sign)
         else:
             return Signs().normal_sign(image, model)
+
+    def paint_arrow_masses(self, image):
+        if not hasattr(self, 'cX'):
+            return image
+        image = cv2.circle(image, (self.cX, self.cY), 2,
+                           (255, 255, 255), -1)  # white masses
+        image = cv2.circle(image, self.cE, 2, (0, 0, 0), -1)
+        return image
 
     def sstr(self):
         return [str(self.path), str(self.signs)]
@@ -900,7 +917,7 @@ class EuclidianClassifier():
         # sections = self.labels2img(img, classes)
         return sections, classes
 
-    def save_model():
+    def save_model(self):
         dump(self, './classifier.joblib')
 
 
@@ -924,10 +941,10 @@ class SceneDescription():
 
     def paint_verbose(self, image):
         image = self.scene_moments_line.paint_contours(image, [255, 150, 36])
-        # image = self.scene_moments_line.paint_lines(image, [255, 255, 0])
-        # image = self.scene_moments_line.paint_defects(image, [255, 0, 255])
-        # image = self.scene_moments_signs.paint_lines(image, [0, 255, 255])
-        # image = self.scene_moments_signs.paint_defects(image, [0, 120, 255])
+        image = self.scene_moments_line.paint_lines(image, [255, 255, 0])
+        image = self.scene_moments_line.paint_defects(image, [255, 0, 255])
+        image = self.scene_moments_signs.paint_lines(image, [0, 255, 255])
+        image = self.scene_moments_signs.paint_defects(image, [0, 120, 255])
         image = self.paint_small_square(image)
         image = self.small_boundaries.paint_boundaries_mid(image)
         image = self.boundaries.paint_boundaries_mid(image)
@@ -1039,6 +1056,7 @@ class BrainFinalExam(Brain):
 
         self.cv_image = scene_description.paint_verbose(self.cv_image)
         self.cv_image = control.paint_vector(self.cv_image)
+        self.cv_image = scene_state.paint_arrow_masses(self.cv_image)
         self.cv_image = cv2.resize(
             self.cv_image, (self.cv_image.shape[1] * 2, self.cv_image.shape[0] * 2))
         self.cv_image = write_text(self.cv_image, text)
