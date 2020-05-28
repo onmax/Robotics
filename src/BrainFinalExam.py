@@ -46,7 +46,7 @@ def write_text(img, texts):
     color = (255, 255, 255)
 
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.7
+    font_scale = 0.35
     texts_sizes = [cv2.getTextSize(text, font, fontScale=font_scale, thickness=1)[
         0] for text in texts]
 
@@ -166,12 +166,19 @@ class ControlCommand():
         self.angle = self.get_angle(self.current_state, memory)
         self.angle = 0 if self.angle == None else self.angle
         self.vx = np.sin(self.angle * np.pi / 180)  # giro
-        self.vy = np.cos(self.angle * np.pi / 180)  # forward
+        self.vy = np.cos(self.angle * np.pi / 180) * 0.7  # forward
         self.vx = self.vx * (-1)
 
+        # mid_point = self.current_state.boundaries.get_active_lane().mid[0]
+        # current_lane = self.current_state.description.center_x
+        # offset_to_mid = current_lane - mid_point
+        print(self.current_state.description.bottom_center)
+
+        # print("offset_to_mid", offset_to_mid)
+
         if np.abs(self.angle) > 12:
-            self.vy *= 0.55
-            self.vx *= 1.4
+            self.vy *= 0.7
+            self.vx *= 1.65
 
         print(self.angle)
         print(self.vx, self.vy)
@@ -530,11 +537,11 @@ class SceneState():
         self.frame_n = frame_n
 
         image = scene_description.image
-        boundaries = scene_description.boundaries
+        self.boundaries = scene_description.boundaries
         sm_line = scene_description.scene_moments_line
         sm_sign = scene_description.scene_moments_signs
         self.description = scene_description
-        self.path = self.detect_path(boundaries, sm_line)
+        self.path = self.detect_path(self.boundaries, sm_line)
         self.signs = self.detect_signs(scene_description.image, sm_sign, model)
 
     def detect_path(self, boundaries, sm_line):
@@ -839,6 +846,8 @@ class SceneDescription():
             image, [0, 0, 255], min_contour_size=1000, type_object="sign")
         self.set_active_lane(memory)
 
+        self.bottom_center = image.shape[0] - 1, int(image.shape[1] / 2)
+
         self.small_image = self.get_small_image(w, h)
         if len(self.boundaries.bottom) > 0:
             self.small_boundaries = self.set_small_boundaries()
@@ -944,7 +953,7 @@ class BrainFinalExam(Brain):
         sections_img, labels = self.clf.predict_image(self.cv_image)
         sections_img = cv2.medianBlur(sections_img, 3)
         scene_description = SceneDescription(
-            sections_img, self.MEMORY, w=60, h=60)
+            sections_img, self.MEMORY, w=120, h=120)
         scene_state = SceneState(
             scene_description, self.N_FRAMES, self.shape_model, self.debug_mode)
         self.MEMORY.append(scene_state)
@@ -957,12 +966,13 @@ class BrainFinalExam(Brain):
         lineDistance = .5
         hasLine = 1
 
-        text = scene_description.sstr() + scene_state.sstr() + control.sstr()
+        # text = scene_description.sstr() + scene_state.sstr() + control.sstr()
+        text = scene_state.sstr() + control.sstr()
 
         self.cv_image = scene_description.paint_verbose(self.cv_image)
         self.cv_image = control.paint_vector(self.cv_image)
         self.cv_image = cv2.resize(
-            self.cv_image, (self.cv_image.shape[1] * 4, self.cv_image.shape[0] * 4))
+            self.cv_image, (self.cv_image.shape[1] * 2, self.cv_image.shape[0] * 2))
         self.cv_image = write_text(self.cv_image, text)
         # visualize the image
         cv2.imshow("Stage Camera Image", self.cv_image)
