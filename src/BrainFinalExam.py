@@ -165,30 +165,49 @@ class ControlCommand():
 
         self.angle = self.get_angle(self.current_state, memory)
         self.angle = 0 if self.angle == None else self.angle
-        self.vx = np.sin(self.angle * np.pi / 180)  # giro
-        self.vy = np.cos(self.angle * np.pi / 180) * 0.7  # forward
-        self.vx = self.vx * (-1)
 
         # mid_point = self.current_state.boundaries.get_active_lane().mid[0]
         # current_lane = self.current_state.description.center_x
         # offset_to_mid = current_lane - mid_point
-        print(self.current_state.description.bottom_center)
+        mid_center = self.current_state.description.bottom_center[1]
+        self.mid_center = Boundary(
+            [mid_center] * 3, x=self.current_state.description.bottom_center[0])
+        self.get_mid_vector()
 
-        # print("offset_to_mid", offset_to_mid)
+        self.final_angle = self.mean_angle([self.angle, self.mid_angle])
+        self.vx = np.sin(np.radians(self.final_angle))  # giro
+        self.vy = np.cos(np.radians(self.final_angle)) * 0.7  # forward
+        self.vx = self.vx * (-1)
 
-        if np.abs(self.angle) > 12:
+        if np.abs(self.final_angle) > 12 and np.abs(self.final_angle) < 20:
             self.vy *= 0.7
-            self.vx *= 1.65
+            self.vx *= 1.8
+        elif np.abs(self.final_angle) >= 20:
+            self.vy *= 0.8
+            self.vx *= 2
 
         print(self.angle)
         print(self.vx, self.vy)
+
+    '''
+    It returns the vector between the center of the bottom of the image to the targeted boundary of the small square
+    '''
+
+    def get_mid_vector(self):
+        small_boundaries = self.current_state.description.small_boundaries
+        _, target = self.get_closest_boundary_to_angle(
+            self.current_state.description.boundaries.get_active_lane(), small_boundaries)
+        print("Mid angle, here we go")
+        print(self.mid_center)
+        self.mid_angle = self.get_angle_between_2_boundaries(
+            self.mid_center, target)
 
     '''
     It returns the angle of the most recent arrow detected in the last 100 frames. If no arrow is detected, an angle of 0 will be returned
     '''
 
     def arrow_angle(self, state, memory):
-        angles = [s.signs.arrow.angle for s in memory[-101:-20]
+        angles = [s.signs.arrow.angle for s in memory[-101:]
                   if s.signs != None and s.signs.arrow != None]
         if len(angles) != 0:
             return np.mean(np.array(angles))
@@ -198,7 +217,6 @@ class ControlCommand():
     def get_angle_between_2_boundaries(self, entrance_boundary, destination_boundary):
         x1, y1 = entrance_boundary.mid[0], entrance_boundary.mid[1]
         x2, y2 = destination_boundary.mid[0], destination_boundary.mid[1]
-
         vector_dir = np.array([x1-x2, y1-y2])
         norm_dir = np.linalg.norm(vector_dir)
         vector_vertical = np.array([0, 1])
@@ -210,7 +228,7 @@ class ControlCommand():
 
         return angle
 
-    def get_closest_boundary_to_angle(self, active, small_boundaries, angle):
+    def get_closest_boundary_to_angle(self, active, small_boundaries):
         candidates = small_boundaries.get_boundaries_no_bottom()
         if active == None:
             return None
@@ -225,10 +243,24 @@ class ControlCommand():
             return 0
 
         min_angle = 90
-        for _angle in angles_right + angles_top + angles_left:
-            if abs(angle - abs(_angle)) < abs(min_angle):
+        for i, _angle in enumerate(angles_right):
+            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
                 min_angle = _angle
-        return min_angle
+                boundary = small_boundaries.right[i]
+        for i, _angle in enumerate(angles_top):
+            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
+                min_angle = _angle
+                boundary = small_boundaries.top[i]
+        for i, _angle in enumerate(angles_left):
+            if abs(self.angle_o - abs(_angle)) < abs(min_angle):
+                min_angle = _angle
+                boundary = small_boundaries.left[i]
+
+        return min_angle, boundary
+
+    def mean_angle(self, deg):
+        from cmath import rect, phase
+        return np.degrees(phase(sum(rect(1, np.radians(d)) for d in deg) / len(deg)))
 
     '''
     It will set the destination points. For that it will use the boundaries of the small square. If the small square contains 2 boundaries, then the boundary that is not in the bottom will be the destination (we assume that always there is one boundary at the bottom)
@@ -238,24 +270,60 @@ class ControlCommand():
         small_boundaries = state.description.small_boundaries
         if state.path.n_way_street != None and small_boundaries.total > 2:
             # It is a n-street
-            angle_o = self.arrow_angle(state, memory)
+            self.angle_o = self.arrow_angle(state, memory)
         # elif small_boundaries.total == 2:
         else:
             # straight or curve
-            angle_o = 0
-        angle = self.get_closest_boundary_to_angle(
-            state.description.boundaries.get_active_lane(), small_boundaries, angle_o)
+            self.angle_o = 0
+        angle, _ = self.get_closest_boundary_to_angle(
+            state.description.boundaries.get_active_lane(), small_boundaries)
         return angle
+
+    def _paint_vector(self, image, vector, length, color):
+        p1, p2 = vector
+        x1, y1 = p1
+        x2, y2 = p2
+        image = cv2.line(image, (x1, y1), (x2, y2), color, 2)
+        return image
 
     def paint_vector(self, image):
         b = self.current_state.description.boundaries.get_active_lane()
         if b == None:
             return image
         x1, y1 = b.mid[0], b.mid[1]
+        length = 60
+        image = self._paint_vector(image, [
+            (x1, y1),
+            (
+                int(x1 - length * -np.sin(np.radians(self.angle))),
+                int(y1 + length * -np.cos(np.radians(self.angle)))
+            )
+        ], 60, (120, 0, 120))
 
-        x2 = int(x1 - 60 * -np.sin(self.angle * np.pi / 180))
-        y2 = int(y1 + 60 * -np.cos(self.angle * np.pi / 180))
-        image = cv2.line(image, (x1, y1), (x2, y2), (120, 0, 120), 2)
+        length = 60
+        x1, y1 = self.mid_center.mid[0], self.mid_center.mid[1]
+        image = self._paint_vector(image, [
+            (x1, y1),
+            (
+                int(x1 - length * -
+                    np.sin(np.radians(self.mid_angle))),
+                int(y1 + length * -
+                    np.cos(np.radians(self.mid_angle)))
+            )
+        ], 60, (0, 120, 120))
+
+        x1, y1 = b.mid[0], b.mid[1]
+        length = 60
+        image = self._paint_vector(image, [
+            (x1, y1),
+            (
+                int(x1 - length * -
+                    np.sin(np.radians(self.final_angle))),
+                int(y1 + length * -
+                    np.cos(np.radians(self.final_angle)))
+            )
+        ], 60, (0, 0, 0))
+
         return image
 
     def sstr(self):
