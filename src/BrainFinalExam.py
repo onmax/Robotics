@@ -167,6 +167,7 @@ class ControlCommand():
         self.angle = 0 if self.angle == None else self.angle
         self.vx = np.sin(self.angle * np.pi / 180)
         self.vy = np.cos(self.angle * np.pi / 180)
+        self.vx = self.vx * (-1)
 
     '''
     It returns the angle of the most recent arrow detected in the last 100 frames. If no arrow is detected, an angle of 0 will be returned
@@ -591,7 +592,6 @@ class SceneMoments():
         self.bw = np.all(sections_img == color, axis=-1).astype(np.uint8)
         if offset:
             self.bw = self.bw[top_offset:, :]
-        cv2.waitKey(0)
 
         sections_bw = self.bw * 255
         self.contours = self.get_contours(sections_bw)
@@ -605,7 +605,7 @@ class SceneMoments():
             self.defects_compl = self.get_defects()
 
     def get_contours(self, img_bw):
-        contours, _ = cv2.findContours(
+        _, contours, _ = cv2.findContours(
             img_bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         return contours
 
@@ -906,6 +906,7 @@ class BrainFinalExam(Brain):
     N_FRAMES = 0
 
     MEMORY = []
+    debug_mode = True
 
     def setup(self):
         self.bridge = CvBridge()
@@ -919,7 +920,6 @@ class BrainFinalExam(Brain):
         cv2.destroyAllWindows()
 
     def step(self):
-
         # access last image received from the camera and convert it into
         # opencv format
         try:
@@ -941,10 +941,10 @@ class BrainFinalExam(Brain):
         scene_description = SceneDescription(
             sections_img, self.MEMORY, w=60, h=60)
         scene_state = SceneState(
-            scene_description, N_FRAMES, self.shape_model, self.debug_mode)
+            scene_description, self.N_FRAMES, self.shape_model, self.debug_mode)
         self.MEMORY.append(scene_state)
-        memory = memory[-120:]
-        control = ControlCommand(memory)
+        self.MEMORY = self.MEMORY[-120:]
+        control = ControlCommand(self.MEMORY)
 
         # Here you should process the image from the camera and calculate
         # your control variable(s), for now we will just give the controller
@@ -952,8 +952,10 @@ class BrainFinalExam(Brain):
         lineDistance = .5
         hasLine = 1
 
+	
         # A trivial on-off controller
-        if (hasLine):
+        self.move(control.vy * 0.7, control.vx)
+        '''if (hasLine):
             if (lineDistance > self.NO_ERROR):
                 self.move(self.FULL_FORWARD, self.HARD_LEFT)
             elif (lineDistance < self.NO_ERROR):
@@ -962,9 +964,9 @@ class BrainFinalExam(Brain):
                 self.move(self.FULL_FORWARD, self.NO_TURN)
         else:
             # if we can't see the line we just stop, this isn't very smart
-            self.move(self.NO_FORWARD, self.NO_TURN)
+            self.move(self.NO_FORWARD, self.NO_TURN)'''
 
-        N_FRAMES += 1
+        self.N_FRAMES += 1
 
 
 def INIT(engine):
