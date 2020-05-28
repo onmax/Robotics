@@ -7,7 +7,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
-from joblib import load
+from joblib import load, dump
 
 import glob
 import numpy as np
@@ -165,9 +165,16 @@ class ControlCommand():
 
         self.angle = self.get_angle(self.current_state, memory)
         self.angle = 0 if self.angle == None else self.angle
-        self.vx = np.sin(self.angle * np.pi / 180)
-        self.vy = np.cos(self.angle * np.pi / 180)
+        self.vx = np.sin(self.angle * np.pi / 180)  # giro
+        self.vy = np.cos(self.angle * np.pi / 180)  # forward
         self.vx = self.vx * (-1)
+
+        if np.abs(self.angle) > 12:
+            self.vy *= 0.55
+            self.vx *= 1.4
+
+        print(self.angle)
+        print(self.vx, self.vy)
 
     '''
     It returns the angle of the most recent arrow detected in the last 100 frames. If no arrow is detected, an angle of 0 will be returned
@@ -824,17 +831,12 @@ class EuclidianClassifier():
 
 class SceneDescription():
     def __init__(self, image, memory, w=60, h=60):
-        print("828")
         self.image = image
-        print("829")
         self.boundaries = Boundaries(self.image)
-        print("832")
         self.scene_moments_line = SceneMoments(
             self.image, [255, 0, 0], type_object="line", compl=True)
-        print("833")
         self.scene_moments_signs = SceneMoments(
             image, [0, 0, 255], min_contour_size=1000, type_object="sign")
-        print("836")
         self.set_active_lane(memory)
 
         self.small_image = self.get_small_image(w, h)
@@ -934,39 +936,42 @@ class BrainFinalExam(Brain):
         except CvBridgeError as e:
             print(e)
 
-        # visualize the image
-        cv2.imshow("Stage Camera Image", self.cv_image)
-        cv2.waitKey(1)
         # write the image to a file, for debugging etc.
         # cv2.imwrite("test-file.jpg",self.cv_image)
 
         # TODO maybe not use clf as we already have colors classified???
-        print("L939")
         self.clf = load('./classifier-euclidian.joblib')
-        print("L940")
         sections_img, labels = self.clf.predict_image(self.cv_image)
         sections_img = cv2.medianBlur(sections_img, 3)
-        print("L942")
         scene_description = SceneDescription(
             sections_img, self.MEMORY, w=60, h=60)
-        print("L943")
         scene_state = SceneState(
             scene_description, self.N_FRAMES, self.shape_model, self.debug_mode)
         self.MEMORY.append(scene_state)
         self.MEMORY = self.MEMORY[-120:]
         control = ControlCommand(self.MEMORY)
 
-        print(control.vx, control.vy)
         # Here you should process the image from the camera and calculate
         # your control variable(s), for now we will just give the controller
         # some 'fixed' values so that it will do something.
         lineDistance = .5
         hasLine = 1
 
-	
+        text = scene_description.sstr() + scene_state.sstr() + control.sstr()
+
+        self.cv_image = scene_description.paint_verbose(self.cv_image)
+        self.cv_image = control.paint_vector(self.cv_image)
+        self.cv_image = cv2.resize(
+            self.cv_image, (self.cv_image.shape[1] * 4, self.cv_image.shape[0] * 4))
+        self.cv_image = write_text(self.cv_image, text)
+        # visualize the image
+        cv2.imshow("Stage Camera Image", self.cv_image)
+        cv2.waitKey(1)
+
         # A trivial on-off controller
-        self.move(control.vy * 0.7, control.vx)
-        '''if (hasLine):
+        self.move(control.vy, control.vx)
+        '''
+        if (hasLine):
             if (lineDistance > self.NO_ERROR):
                 self.move(self.FULL_FORWARD, self.HARD_LEFT)
             elif (lineDistance < self.NO_ERROR):
@@ -975,7 +980,8 @@ class BrainFinalExam(Brain):
                 self.move(self.FULL_FORWARD, self.NO_TURN)
         else:
             # if we can't see the line we just stop, this isn't very smart
-            self.move(self.NO_FORWARD, self.NO_TURN)'''
+            self.move(self.NO_FORWARD, self.NO_TURN)
+            '''
 
         self.N_FRAMES += 1
 
