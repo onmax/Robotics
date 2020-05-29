@@ -1,5 +1,7 @@
-from pyrobot.brain import Brain
+#Este archivo es muy extenso debido a que no hemos podido realizar 
+#imports externos por dificultades en la configuración de la máquina virtual
 
+from pyrobot.brain import Brain
 import math
 import time
 import rospy
@@ -9,10 +11,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
 from joblib import load, dump
-
 import glob
 import numpy as np
-# import imageio
 
 
 b, g, r = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
@@ -121,16 +121,11 @@ class KneighboursClassifier():
 
     def img2contour(self, img):
         img = img[:, :, :3]
-        # bw = np.ones(img.shape[:2])
-        # bw[np.where(np.all(img[:, :, 0] >= 230, img[:, :, 1]
-        #    < 20, img[:, :, 2] < 20))] = 0
         bw = np.logical_and(img[:, :, 0] < 20, img[:, :, 1]
                             < 20, img[:, :, 2] >= 230).astype(np.uint8) * 255
         _, contours, _ = cv2.findContours(
             bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         plottedContour = cv2.drawContours(bw, contours, -1, (0, 255, 0), 2)
-        # cv2.imshow('CONTOUR', plottedContour)
-        # cv2.waitKey(0)
         contour = None
         if len(contours) != 0:
             for i in range(len(contours)):
@@ -140,10 +135,6 @@ class KneighboursClassifier():
 
         return contour
 
-        # bw = np.logical_and(img[:, :, 0] >= 230, img[:, :, 1]
-        #                     < 20, img[:, :, 2] < 20).astype(np.uint8) * 255
-        # contours  = cv2.findContours(bw, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[-2]
-        # return contours[0] if len(contours) > 0 else None
 
     def contour2des(self, img, contour):
         (x, y), axis, angle = cv2.fitEllipse(contour)
@@ -158,37 +149,28 @@ class KneighboursClassifier():
 
 class ControlCommand():
     def __init__(self, memory):
-        # self.memory = memory
 
         self.current_state = memory[-1]
-        # if self.current_state.signs.arrow != None:
-        #     LAST_ARROW = self.current_state.signs.arrow
 
+       
         self.angle = self.get_angle(self.current_state, memory)
         self.angle = 0 if self.angle == None else self.angle
 
-        # mid_point = self.current_state.boundaries.get_active_lane().mid[0]
-        # current_lane = self.current_state.description.center_x
-        # offset_to_mid = current_lane - mid_point
         mid_center = self.current_state.description.bottom_center[1]
         self.mid_center = Boundary(
             [mid_center] * 3, x=self.current_state.description.bottom_center[0])
         self.get_mid_vector()
 
-        self.final_angle = self.mean_angle([self.angle, self.mid_angle])
+        if abs(self.angle) > 40:
+            self.final_angle = self.mean_angle(
+                [self.angle * 1.75, self.mid_angle])
+        else:
+            self.final_angle = self.mean_angle([self.angle, self.mid_angle])
+
         self.vx = np.sin(np.radians(self.final_angle))  # giro
         self.vx = self.vx * (-1)
         self.vy = max(0, 1 - abs(self.vx * 1.7))
 
-        '''if np.abs(self.final_angle) > 12 and np.abs(self.final_angle) < 20:
-            self.vy *= 0.7
-            self.vx *= 1.8
-        elif np.abs(self.final_angle) >= 20:
-            self.vy *= 0.8
-            self.vx *= 2'''
-
-        print("Angulo", self.final_angle)
-        print("Velocidades", self.vx, self.vy)
     '''
     It returns the vector between the center of the bottom of the image to the targeted boundary of the small square
     '''
@@ -205,7 +187,7 @@ class ControlCommand():
     '''
 
     def arrow_angle(self, state, memory):
-        angles = [s.signs.arrow.angle for s in memory[-12:-7]
+        angles = [s.signs.arrow.angle for s in memory[-12:-4]
                   if s.signs != None and s.signs.arrow != None]
         if len(angles) != 0:
             return self.mean_angle(angles)
@@ -245,7 +227,6 @@ class ControlCommand():
 
         if len(angles_right + angles_top + angles_left) == 0:
             return 0,None
-        T, __i = "", -1
         min_angle = 900
         current = None
         for i, _angle in enumerate(angles_right):
@@ -254,7 +235,7 @@ class ControlCommand():
                 min_angle = _angle
                 boundary = small_boundaries.right[i]
         for i, _angle in enumerate(angles_top):
-            if current is None or abs(self.angle_o - _angle) < current:
+            if current is None or abs(self.angle_o - _angle)  < current:
                 current = abs(self.angle_o - _angle)
                 min_angle = _angle
                 boundary = small_boundaries.top[i]
@@ -278,7 +259,6 @@ class ControlCommand():
         if state.path.n_way_street != None and small_boundaries.total > 2:
             # It is a n-street
             self.angle_o = self.arrow_angle(state, memory)
-        # elif small_boundaries.total == 2:
         else:
             # straight or curve
             self.angle_o = 0
@@ -573,26 +553,14 @@ class Path():
 
 class Arrow():
     def __init__(self, center_ellipsis, center_masses, angle_ellipsis):
-        def angle_between(p1, p2):
-            ang1 = np.arctan2(*p1[::-1])
-            ang2 = np.arctan2(*p2[::-1])
-            return np.rad2deg((ang1 - ang2) % (2 * np.pi))
 
         (EX, EY) = center_ellipsis
         (MX, MY) = center_masses
-        vector = np.array([MX - EX, MY - EY])
-        self.angle = np.rad2deg(np.arccos(np.dot(vector,np.array([0,1]))/np.linalg.norm(vector)))
-        if vector[0] < 0 : #y en sentido de las agujas respecto de vector
-            self.angle = self.angle - 180
-        else:
-            self.angle = 180 - self.angle
+        self.angle = (((-angle_ellipsis + 90) * -1) -
+                      90) if EX > MX else angle_ellipsis
             
-        #self.angle = angle_ellipsis * -1 if EX > MX else angle_ellipsis
-        print((center_ellipsis, center_masses))
-        # self.angle = angle_between(center_ellipsis, center_masses)
-        print("ANGULO FLECHA", self.angle, angle_ellipsis)
         self.direction = "left" if self.angle < 0 else "right"
-
+        
 
 class Signs():
     def __init__(self):
@@ -751,7 +719,6 @@ class SceneMoments():
                 contour = _contour
                 i = _i
         return contour, i
-        # return self.contours[0], 0
 
     '''
     Return a list of string containing useful data about the object: length of the contours and length of the defects for both, complement and normal
@@ -878,8 +845,6 @@ class EuclidianClassifier():
         self.labels_centroids = np.unique(labels)
         self.centroids = np.array(
             [np.mean(X[labels == l], axis=0) for l in self.labels_centroids])
-        # self.clf = SVC()
-        # self.clf.fit(X, labels)
 
     def classes2sections(self, shape, classes):
         '''
@@ -914,7 +879,6 @@ class EuclidianClassifier():
         predictions = np.linalg.norm(self.centroids[:, np.newaxis] - X, axis=2)
         classes = np.argmin(predictions, axis=0)
         return classes
-        # return self.clf.predict(X)
 
     def predict_image(self, img):
         '''
@@ -923,7 +887,6 @@ class EuclidianClassifier():
         X = self.normalize_img(img).reshape((-1, 2))
         classes = self.predict(X)
         sections, labels = self.classes2sections(img.shape, classes)
-        # sections = self.labels2img(img, classes)
         return sections, classes
 
     def save_model(self):
@@ -937,7 +900,7 @@ class SceneDescription():
         self.scene_moments_line = SceneMoments(
             self.image, [255, 0, 0], type_object="line", compl=True)
         self.scene_moments_signs = SceneMoments(
-            image, [0, 0, 255], min_contour_size=1000, type_object="sign", inferior=-20)
+            image, [0, 0, 255], min_contour_size=1000, type_object="sign", inferior=-1)
         self.set_active_lane(memory)
 
         self.bottom_center = image.shape[0] - 1, int(image.shape[1] / 2)
@@ -1000,22 +963,9 @@ class SceneDescription():
 
 class BrainFinalExam(Brain):
 
-    NO_FORWARD = 0
-    SLOW_FORWARD = 0.1
-    MED_FORWARD = 0.5
-    FULL_FORWARD = 1.0
-
-    NO_TURN = 0
-    MED_LEFT = 0.5
-    HARD_LEFT = 1.0
-    MED_RIGHT = -0.5
-    HARD_RIGHT = -1.0
-
-    NO_ERROR = 0
     N_FRAMES = 0
 
     MEMORY = []
-    debug_mode = True
 
     debug_mode = True
 
@@ -1035,14 +985,9 @@ class BrainFinalExam(Brain):
         # opencv format
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(self.rosImage, "bgr8")
-            # self.cv_image = self.bridge.imgmsg_to_cv2(self.rosImage, "rgb8")
         except CvBridgeError as e:
             print(e)
 
-        # write the image to a file, for debugging etc.
-        # cv2.imwrite("test-file.jpg",self.cv_image)
-
-        # TODO maybe not use clf as we already have colors classified???
         self.clf = load('./classifier-euclidian.joblib')
         sections_img, labels = self.clf.predict_image(self.cv_image)
         sections_img = cv2.medianBlur(sections_img, 3)
@@ -1063,9 +1008,6 @@ class BrainFinalExam(Brain):
         # text = scene_description.sstr() + scene_state.sstr() + control.sstr()
         text = scene_state.sstr() + control.sstr()
 
-        self.cv_image = scene_description.paint_verbose(self.cv_image)
-        self.cv_image = control.paint_vector(self.cv_image)
-        self.cv_image = scene_state.paint_arrow_masses(self.cv_image)
         self.cv_image = cv2.resize(
             self.cv_image, (self.cv_image.shape[1] * 2, self.cv_image.shape[0] * 2))
         self.cv_image = write_text(self.cv_image, text)
@@ -1075,18 +1017,7 @@ class BrainFinalExam(Brain):
 
         # A trivial on-off controller
         self.move(control.vy, control.vx)
-        '''
-        if (hasLine):
-            if (lineDistance > self.NO_ERROR):
-                self.move(self.FULL_FORWARD, self.HARD_LEFT)
-            elif (lineDistance < self.NO_ERROR):
-                self.move(self.FULL_FORWARD, self.HARD_RIGHT)
-            else:
-                self.move(self.FULL_FORWARD, self.NO_TURN)
-        else:
-            # if we can't see the line we just stop, this isn't very smart
-            self.move(self.NO_FORWARD, self.NO_TURN)
-            '''
+        
 
         self.N_FRAMES += 1
 
